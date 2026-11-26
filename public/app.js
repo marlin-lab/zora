@@ -1079,20 +1079,37 @@ async function openGraph() {
     return Math.pow(w, 0.65);
   }
   function ageCol(ts){
-    const w = ageW(ts);
-    return 'hsl(24,' + Math.round(8 + 84 * w) + '%,' + Math.round(78 - 30 * w) + '%)';
+    const w = ageW(ts);                       /* 1 = 最近，0 = 很远 */
+    if (w >= 0.62) {                            /* 橙：最近写的 */
+      const k = (w - 0.62) / 0.38;
+      return 'hsl(24,' + Math.round(42 + 50 * k) + '%,' + Math.round(68 - 20 * k) + '%)';
+    }
+    if (w >= 0.26) {                            /* 蓝：中等新旧 */
+      const k = (w - 0.26) / 0.36;
+      return 'hsl(197,' + Math.round(8 + 46 * k) + '%,' + Math.round(74 - 21 * k) + '%)';
+    }
+    return 'hsl(30,3%,' + Math.round(74 + 4 * (w / 0.26)) + '%)';   /* 灰：很久之前 / 没写日期 */
   }
 
   const canvas = $('#graphCanvas');
   const wrap = $('#graphWrap');
   const ctx = canvas.getContext('2d');
 
+  function updOf(nd){
+    if (updMap[nd.path] != null) return updMap[nd.path];
+    var pre = nd.path ? nd.path + '/' : '';
+    if (!pre) return 0;
+    var mx = 0;
+    for (var k in updMap) { if (k.indexOf(pre) === 0 && updMap[k] > mx) mx = updMap[k]; }
+    return mx;
+  }
+
   /* ---- 数据准备 ---- */
   const nodes = g.nodes.map((n, i) => {
     const ang = (i / Math.max(1, g.nodes.length)) * Math.PI * 2;
     const r = 160 + (i % 7) * 42;
     return {
-      ...n, deg: 0, col: ageCol(updMap[n.path]), w: ageW(updMap[n.path]),
+      ...n, deg: 0, w: ageW(updOf(n)), col: ageCol(updOf(n)),
       x: Math.cos(ang) * r, y: Math.sin(ang) * r,
       vx: 0, vy: 0,
     };

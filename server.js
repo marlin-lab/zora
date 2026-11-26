@@ -150,7 +150,7 @@ function scanDir(absDir, relDir) {
           var _nd = nameDateMs(ent.name);
           var _em = readEditMeta()[relChild.replace(/\\/g, '/')] || 0;
           if (_nd) return _nd;                       /* 文件名带日期：按内容日期排 */
-          return _em || (st ? st.mtimeMs : 0);       /* 无日期：按最近编辑排 */
+          return 0;                                  /* 没写日期：不参与时间排序，沉底 */
         })()
       });
     }
