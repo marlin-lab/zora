@@ -1059,12 +1059,25 @@ async function openGraph() {
   $('#content').innerHTML = `
     <div class="graph-wrap" id="graphWrap">
       <canvas id="graphCanvas"></canvas>
-      <div class="graph-hud">🕸 拖拽节点 · 滚轮缩放 · 拖背景平移 · 单击节点打开文章</div>
+      <div class="graph-hud">🕸 颜色越鲜=越近写的 · 滚轮缩放 · 拖背景平移 · 单击打开</div>
     </div>`;
   let g;
   try { g = await GET('/api/graph'); }
   catch (e) { $('#content').innerHTML = '<div class="empty"><h3>图谱数据加载失败</h3></div>'; return; }
   if (state.view !== 'graph') return; // 已切换走
+
+  /* 每个节点的"新鲜度"：越近的颜色越鲜，越久的越灰 */
+  const updMap = {};
+  try {
+    const tr = await GET('/api/tree');
+    (function walkNode(nd){ (nd.articles||[]).forEach(function(a){ updMap[a.path]=a.updated||0; }); (nd.folders||[]).forEach(walkNode); })(tr);
+  } catch (e) {}
+  function ageCol(ts){
+    if (!ts) return 'hsl(196,4%,76%)';
+    const days = (Date.now() - ts) / 86400000;
+    const w = Math.max(0, Math.min(1, 1 - days / 90));
+    return 'hsl(196,' + Math.round(4 + 56 * w) + '%,' + Math.round(76 - 24 * w) + '%)';
+  }
 
   const canvas = $('#graphCanvas');
   const wrap = $('#graphWrap');
@@ -1075,7 +1088,7 @@ async function openGraph() {
     const ang = (i / Math.max(1, g.nodes.length)) * Math.PI * 2;
     const r = 160 + (i % 7) * 42;
     return {
-      ...n, deg: 0,
+      ...n, deg: 0, col: ageCol(updMap[n.path]),
       x: Math.cos(ang) * r, y: Math.sin(ang) * r,
       vx: 0, vy: 0,
     };
@@ -1176,7 +1189,7 @@ async function openGraph() {
       const near = hoverId !== null && edges.some(e => (e.s === hoverId && e.t === n.id) || (e.t === hoverId && e.s === n.id));
       ctx.beginPath();
       ctx.arc(n.x, n.y, nodeR(n) + (hot ? 2.5 : 0), 0, Math.PI * 2);
-      ctx.fillStyle = hot ? '#4f6ef7' : near ? '#7c5cf0' : '#8a90a3';
+      ctx.fillStyle = hot ? '#4f6ef7' : near ? '#7c5cf0' : n.col;
       ctx.globalAlpha = hoverId === null || hot || near ? 1 : 0.35;
       ctx.fill();
       ctx.globalAlpha = hoverId === null || hot || near ? 1 : 0.4;
