@@ -132,7 +132,7 @@ function scanDir(absDir, relDir) {
   try { entries = fs.readdirSync(absDir, { withFileTypes: true }); } catch { return out; }
   for (const ent of entries) {
     if (ent.name.startsWith('.') || ent.name.startsWith('_assets')) continue;
-    if (!relDir && ['records', 'metrics.json', 'prefs.json', 'todos.md'].includes(ent.name)) continue;
+    if (!relDir && ['records', 'timeline', 'metrics.json', 'prefs.json', 'todos.md'].includes(ent.name)) continue;
     const absChild = path.join(absDir, ent.name);
     const relChild = relDir ? relDir + '/' + ent.name : ent.name;
     if (ent.isDirectory()) {
