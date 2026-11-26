@@ -446,11 +446,11 @@ footer{padding:70px 0 60px}
 .doneWrap .todo{border-bottom-color:#efefec}
 /* 待办行：极简右侧（日期 + 天数），去掉胶囊与进度条 */
 .todo{position:relative;animation:rowIn .26s cubic-bezier(.2,.8,.2,1) both}
-.todo .dd{font-family:var(--body);font-size:12px;color:#a9a9a4;letter-spacing:.02em}
+.todo .dd{font-family:var(--body);font-size:11.5px;color:#b4b4af;letter-spacing:.02em}
 .todo .dd.ghost{border-bottom:1px dashed #cfcfca;color:#c3c3be;cursor:pointer;padding-bottom:1px}
-.todo .dn{font-family:var(--head);font-size:13.5px;color:var(--graphite);min-width:44px;text-align:right;font-variant-numeric:tabular-nums}
+.todo .dn{font-family:var(--body);font-size:16px;font-weight:600;color:#151513;min-width:58px;text-align:right;letter-spacing:.01em;font-variant-numeric:tabular-nums}
 .todo .dn.soon{color:var(--ember)}
-.todo .dn.today{color:var(--ember);font-weight:400}
+.todo .dn.today{color:var(--ember);font-weight:600}
 .todo .dn.over{color:#b0391a}
 .todo .txt{transition:color .2s}
 .todo.removing{opacity:0;transform:translateX(10px);transition:opacity .22s ease,transform .22s ease}
@@ -550,7 +550,7 @@ html,body{overflow-x:hidden}
 
 <section class="band" id="tasks">
   <div class="wrap">
-    <div class="secHead"><h2>待办与倒数日</h2><span class="tag">Tasks · 截止日优先</span></div>
+    <div class="secHead"><h2>待办</h2><span class="tag">按截止日排</span></div>
     <div class="panel mp">
         <div class="tAdd">
           <input id="todoInput" placeholder="＋ 写一条待办，回车就能加上">
