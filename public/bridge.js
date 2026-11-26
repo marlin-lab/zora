@@ -17,7 +17,7 @@
   var st = d.createElement('style');
   st.textContent = [
     '#kbStageWrap{position:fixed;left:264px;top:0;right:0;bottom:0;z-index:5;background:#fff;display:none}','@media(max-width:900px){#kbStageWrap{left:0;top:0}}',
-    '#kbStageWrap.on{display:block}',
+    '#kbStageWrap{opacity:0;transition:opacity .22s ease,transform .22s cubic-bezier(.2,.8,.2,1);transform:translateY(4px)}','#kbStageWrap.on{display:block}','#kbStageWrap.vis{opacity:1;transform:none}',
     'body.kb-stage-on .topbar{display:none!important}',
     '#kbStageFrame{width:100%;height:100%;border:0;display:block;background:#fff}',
     '#kbNoteMask{position:fixed;inset:0;background:rgba(20,24,40,.42);backdrop-filter:blur(3px);z-index:100;display:none;align-items:center;justify-content:center}',
@@ -51,10 +51,14 @@
   function openStage() {
     d.body.classList.add('kb-stage-on');
     wrap.classList.add('on');
+    requestAnimationFrame(function () { requestAnimationFrame(function () { wrap.classList.add('vis'); }); });
   }
   function closeStage() {
-    wrap.classList.remove('on');
+    wrap.classList.remove('vis');
     d.body.classList.remove('kb-stage-on');
+    setTimeout(function () {
+      if (!wrap.classList.contains('vis')) wrap.classList.remove('on');
+    }, 240);
   }
 
   /* ---------------- 小记弹层 ---------------- */

@@ -167,3 +167,32 @@ kbd {
   font-size: 11.5px; color: var(--text-3);
 }
 .qs-foot .qs-tip { margin-left: auto; }
+
+/* ===== 动效：首页列表逐条进入 + hover 位移 ===== */
+@keyframes hIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@keyframes hFade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes qsIn { from { opacity: 0; transform: translateY(-8px) scale(.985); } to { opacity: 1; transform: none; } }
+@keyframes qsMask { from { opacity: 0; } to { opacity: 1; } }
+
+.hgroup { animation: hFade .38s ease both; }
+.hgroup .hitem { animation: hIn .34s cubic-bezier(.2,.8,.2,1) both; }
+.hgroup .hitem:nth-child(2) { animation-delay: .03s; }
+.hgroup .hitem:nth-child(3) { animation-delay: .06s; }
+.hgroup .hitem:nth-child(4) { animation-delay: .09s; }
+.hgroup .hitem:nth-child(5) { animation-delay: .12s; }
+.hgroup .hitem:nth-child(6) { animation-delay: .15s; }
+.hgroup .hitem:nth-child(7) { animation-delay: .18s; }
+.hgroup .hitem:nth-child(8) { animation-delay: .21s; }
+.hitem { transition: background .12s, padding-left .18s cubic-bezier(.2,.8,.2,1); }
+.hitem:hover { padding-left: 16px; }
+
+.qs-mask { animation: qsMask .18s ease both; }
+.qs-box { animation: qsIn .24s cubic-bezier(.2,.8,.2,1) both; }
+
+/* 侧栏目录行的悬停反馈 */
+.tree-row { transition: background .12s, color .12s; }
+
+@media (prefers-reduced-motion: reduce) {
+  .hgroup, .hgroup .hitem, .qs-mask, .qs-box { animation: none !important; }
+  .hitem:hover { padding-left: 10px; }
+}
