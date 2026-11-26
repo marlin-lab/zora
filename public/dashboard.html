@@ -12,6 +12,8 @@
     var _set = localStorage.setItem.bind(localStorage);
     localStorage.setItem = function (k, v) {
       _set(k, v);
+      /* 只有用户动手改过才回推；页面读取/同步写入一律不回推 */
+      if (!window.__kbUserEdit) return;
       if (k !== KEY || !synced) return;
       var obj;
       try { obj = JSON.parse(v); } catch (e) { return; }
@@ -37,11 +39,8 @@
 
       // 本机有数据就听本机的（避免服务端旧副本覆盖用户刚加的记录）
       if (local && localRaw) {
-        if (!remote || !remoteAt || remoteAt < localAt || localAt === 0) {
-          fetch('/api/sync', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ state: local, at: localAt || Date.now() })
-          }).catch(function () {});
+        if (!remote || !remoteAt) {
+          /* 服务端是空的：这次沿用本机那份，但不主动覆盖，等用户动手 */
         } else if (remoteAt > localAt && localAt > 0) {
           remote._at = remoteAt;
           _rawSet(KEY, JSON.stringify(remote));
@@ -708,7 +707,10 @@ let state=(function(){
 let lastWriteAt=0;
 function save(){
   lastWriteAt=Date.now();
+  /* 只有用户动手改过，钩子才把整份 state 回推服务端 */
+  window.__kbUserEdit=true;
   try{localStorage.setItem(KEY,JSON.stringify(state));}catch(e){}
+  window.__kbUserEdit=false;
 }
 /* ---------- 服务端是真相源：启动拉一次 + SSE 变更推送 ---------- */
 function normalizeAll(list){
