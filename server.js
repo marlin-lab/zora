@@ -607,9 +607,6 @@ const server = http.createServer(async (req, res) => {
       return await api(req, res, url);
     }
     if (url.pathname === '/') {
-      return serveStatic(res, path.join(PUBLIC_DIR, 'dashboard.html'));
-    }
-    if (url.pathname === '/repo') {
       return serveStatic(res, path.join(PUBLIC_DIR, 'classic.html'));
     }
     if (url.pathname === '/index.html') {

@@ -42,7 +42,7 @@
   wrap.id = 'kbStageWrap';
   var fr = d.createElement('iframe');
   fr.id = 'kbStageFrame';
-  fr.src = '/dashboard.html';
+  fr.src = '/dashboard.html?embed=1';
   fr.setAttribute('frameborder', '0');
   wrap.appendChild(fr);
   d.body.appendChild(wrap);
@@ -129,7 +129,7 @@
   d.addEventListener('click', function (e) {
     var t = e.target.closest ? e.target.closest('button,a') : null;
     if (t) {
-      if (t.id === 'rbStatus' || t.id === 'btnStatus') { location.href = '/'; return; }
+      if (t.id === 'rbStatus' || t.id === 'btnStatus') { openStage(); return; }
       if (t.id === 'rbQuick' || t.id === 'btnQuick') { openNote(); return; }
       if (t.id === 'kbNoteSave') { saveNote(); return; }
       if (t.id === 'kbNoteCancel') { closeNote(); return; }

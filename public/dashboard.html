@@ -86,10 +86,10 @@
   --body:"Inter","Segoe UI","Microsoft YaHei","PingFang SC",sans-serif;
 }
 html.embed nav{display:none!important}
-html.embed #fab{display:none!important}
+html.embed #fab{display:flex}
 html.embed body{background:#fefffc}
 /* 嵌进总览页时只留有信息量的部分：日志/指标管理/设置/关于留在独立页面 */
-html.embed #records,html.embed #journal,html.embed #metrics,html.embed #settings,html.embed #about,html.embed footer{display:none!important}
+html.embed #records,html.embed #journal,html.embed #metrics,html.embed #settings,html.embed footer{display:none!important}
 html.embed .hero{align-items:start;padding-top:8px;padding-bottom:16px}
 html.embed .heroR{min-height:0;justify-content:flex-start;gap:12px;display:grid;grid-template-columns:1fr 1fr;align-items:stretch}
 html.embed .heroR .dcard{width:auto!important;padding:16px 18px}
@@ -115,8 +115,6 @@ html.embed .topback{display:none!important}
 .navpill a:hover{background:#fff}
 .addbtn{margin-left:auto;border:1px solid var(--ember);background:var(--ember);color:#fff;border-radius:200px;padding:9px 20px;font-size:14px;font-family:var(--body);cursor:pointer;transition:.16s;white-space:nowrap}
 .addbtn:hover{background:#2b7fa6;border-color:#2b7fa6}
-.repoLink{font-size:13px;color:var(--slate);text-decoration:none;border:1px solid #d8d8d3;border-radius:200px;padding:6px 14px;transition:.16s;white-space:nowrap}
-.repoLink:hover{color:var(--graphite);border-color:#b9b9b3;background:#fff}
 @media(max-width:760px){.addbtn{margin-left:8px;padding:8px 14px;font-size:13px}}
 .btn-solid{background:var(--graphite);color:#fff;border:0;border-radius:0;padding:11px 20px;font-family:var(--head);font-size:15px;letter-spacing:-.02em;cursor:pointer;transition:background .18s}
 .btn-solid:hover{background:#000}
@@ -486,13 +484,13 @@ html,body{overflow-x:hidden}
   <div class="wrap navin">
     <div class="navleft">
       <div class="brand">清溯 Zora<em>DATA</em></div>
-        <a class="repoLink" href="/repo" title="回到仓库文档">仓库</a>
     </div>
       <div class="navpill">
         <a href="#tasks">待办</a><a href="#today">评分</a><a href="#meals">吃了</a><a href="#about">画像</a>
     </div><button class="addbtn" id="navAddTodo">＋ 加待办</button>
   </div>
 </nav>
+<button id="fab" type="button"><i>＋</i>加待办</button>
 
 
 <header class="hero wrap">
@@ -1349,6 +1347,11 @@ if(_tlEl) _tlEl.addEventListener('dblclick',function(e){
 });
 
 
+var _fab=document.getElementById('fab');
+if(_fab) _fab.addEventListener('click',function(){
+  var sec=document.getElementById('tasks'); if(sec) sec.scrollIntoView({behavior:'smooth',block:'start'});
+  setTimeout(function(){var i=document.getElementById('todoInput'); if(i) i.focus();},420);
+});
 var _na=document.getElementById('navAddTodo');
 if(_na) _na.addEventListener('click',function(){
   var sec=document.getElementById('tasks'); if(sec) sec.scrollIntoView({behavior:'smooth',block:'start'});
