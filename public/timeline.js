@@ -170,6 +170,7 @@
             (!thin ? '<b>' + esc(s.title || '（没写）') + '</b>' : '') +
             (showTime ? '<i>' + s.t + '–' + s.end + (s.dur ? ' · ' + fmtDur(s.dur) : '') + '</i>' : '') +
             (showTime && s.note ? '<em>' + esc(s.note) + '</em>' : '') +
+            (thin ? '' : '<div class="tbHandle top"></div><div class="tbHandle bot"></div>') +
           '</div>';
       }).join('');
       /* 现在时刻 */
@@ -197,6 +198,8 @@
     if (lg) lg.innerHTML = keys.map(function (k) {
       return '<span><i style="background:' + (TAGCOL[k] || '#b9bcb4') + '"></i>' + esc(k) + '<b>' + fmtDur(byTag[k]) + '</b></span>';
     }).join('');
+
+    ensureTrash();
 
     /* 默认滚到第一段附近 */
     var wrap = document.getElementById('tbWrap');
@@ -263,7 +266,6 @@
     var r = ROWS[i] || {};
     var items = [];
     items.push('<button type="button" data-a="rename">改名</button>');
-    items.push('<button type="button" data-a="time">改时间</button>');
     items.push('<button type="button" data-a="note">' + (r.note ? '改备注' : '加备注') + '</button>');
     var tags = '<div class="tbTagRow">' + Object.keys(TAGCOL).map(function (k) {
       return '<button type="button" data-tag="' + k + '" title="' + k + '"><i style="background:' + TAGCOL[k] + '"></i></button>';
@@ -287,7 +289,6 @@
       if (!a) return;
       closeMenu();
       if (a === 'rename') startRename(i, isNew);
-      if (a === 'time') popTime(i, x, y);
       if (a === 'note') popNote(i, x, y);
       if (a === 'del') del(i);
     });
@@ -387,6 +388,31 @@
     toast('删掉了「' + ((gone[0] && gone[0].title) || '') + '」', function () { commit(backup); });
   }
 
+  /* 垃圾桶：拖动时浮出，拖进去就删 */
+  function ensureTrash() {
+    var col = document.querySelector('.tlCol');
+    if (!col || document.getElementById('tbTrash')) return;
+    var t = document.createElement('div');
+    t.id = 'tbTrash';
+    t.className = 'tbTrash';
+    t.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M4 7h16M9 7V5h6v2M7 7l1 13h8l1-13"/><path d="M10 11.5v5.5M14 11.5v5.5"/></svg>';
+    col.appendChild(t);
+  }
+  function showTrash(on) {
+    ensureTrash();
+    var t = document.getElementById('tbTrash');
+    if (!t) return;
+    t.classList.toggle('on', !!on);
+    if (!on) t.classList.remove('hot');
+  }
+  function dropDelete(i) {
+    var backup = ROWS.map(function (r) { return JSON.parse(JSON.stringify(r)); });
+    var next = ROWS.slice();
+    var gone = next.splice(i, 1);
+    commit(next);
+    toast('拖进垃圾桶删掉了「' + ((gone[0] && gone[0].title) || '') + '」', function () { commit(backup); });
+  }
+
   /* ---------------- 拖动 / 拉伸 / 新建 ---------------- */
   var drag = null;
 
@@ -399,9 +425,11 @@
     var card = blk;
     var rect = card.getBoundingClientRect();
     var i = +card.getAttribute('data-i');
+    var h = rect.height;
+    var edge = h >= 44 ? 10 : 7;
     var mode = 'move';
-    if (e.clientY - rect.top < 7 && rect.height > 26) mode = 'top';
-    else if (rect.bottom - e.clientY < 7 && rect.height > 26) mode = 'end';
+    if (h >= 26 && e.clientY - rect.top < edge) mode = 'top';
+    else if (h >= 26 && rect.bottom - e.clientY < edge) mode = 'end';
     drag = {
       i: i, mode: mode, y0: e.clientY, el: card, moved: false,
       t0: toMin(ROWS[i].t), e0: toMin(ROWS[i].end),
@@ -418,8 +446,23 @@
       drag.moved = true;
       drag.el.classList.add('dragging');
       document.body.classList.add('tbDragging');
+      showTrash(true);
     }
     var dMin = snapMin(dy / SLOT * 30);
+    /* 拖到垃圾桶上就标红（只有整块移动才允许删） */
+    var tr = document.getElementById('tbTrash');
+    if (tr) {
+      var rc = tr.getBoundingClientRect();
+      var inside = drag.mode === 'move' && e.clientX > rc.left - 6 && e.clientX < rc.right + 6 && e.clientY > rc.top - 6 && e.clientY < rc.bottom + 6;
+      tr.classList.toggle('hot', inside);
+      drag.trashHit = inside;
+    }
+    var tip = document.getElementById('tbTip');
+    if (drag.trashHit) {
+      if (tip) tip.textContent = '松手删除';
+      if (tip) { tip.style.left = (e.clientX + 14) + 'px'; tip.style.top = (e.clientY - 26) + 'px'; }
+      return;
+    }
     var r = ROWS[drag.i];
     var t = drag.t0, en = drag.e0;
     if (drag.mode === 'move') {
@@ -454,6 +497,8 @@
     document.body.classList.remove('tbDragging');
     var tip = document.getElementById('tbTip'); if (tip) tip.remove();
     d.el.classList.remove('dragging');
+    showTrash(false);
+    if (d.moved && d.trashHit && d.mode === 'move') { dropDelete(d.i); return; }
     if (!d.moved || !d.cur) { return; }
     var next = ROWS.map(function (r) { return JSON.parse(JSON.stringify(r)); });
     next[d.i].t = toHHMM(d.cur.t);
@@ -540,7 +585,7 @@
     '.tbBlock{position:absolute;border-radius:7px;padding:3px 9px;overflow:hidden;cursor:grab;box-sizing:border-box;' +
       'box-shadow:0 1px 2px rgba(0,0,0,.03);transition:box-shadow .16s,filter .16s}' +
     '.tbBlock:hover{box-shadow:0 3px 12px rgba(0,0,0,.09)}' +
-    '.tbBlock.dragging{opacity:.92;box-shadow:0 12px 30px rgba(0,0,0,.16);cursor:grabbing;z-index:9}' +
+    '.tbBlock.dragging{opacity:.86;box-shadow:0 14px 34px rgba(0,0,0,.18);cursor:grabbing;z-index:9}' +
     '.tbBlock b{display:block;font-size:12.5px;font-weight:600;color:#2b2b28;line-height:19px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}' +
     '.tbBlock i{display:block;font-style:normal;font-size:10.5px;color:#8b8b85;font-variant-numeric:tabular-nums;line-height:15px;white-space:nowrap;overflow:hidden}' +
     '.tbBlock em{display:block;font-style:normal;font-size:10.5px;color:#9a9a93;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}' +
@@ -573,6 +618,16 @@
     '.tbToast{position:fixed;left:50%;bottom:30px;transform:translate(-50%,14px);display:flex;align-items:center;gap:14px;background:#2b2b28;color:#f4f4ef;font-size:12.5px;padding:9px 14px;border-radius:100px;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:140}' +
     '.tbToast.on{opacity:1;transform:translate(-50%,0);pointer-events:auto}' +
     '.tbToast button{font:inherit;font-size:12px;background:none;border:0;color:#ffd7a8;cursor:pointer;padding:0}' +
+    '.tlCol{position:relative}' +
+    '.tbHandle{position:absolute;left:0;right:0;height:9px;cursor:ns-resize;z-index:3}' +
+    '.tbHandle.top{top:0;border-radius:7px 7px 0 0}' +
+    '.tbHandle.bot{bottom:0;border-radius:0 0 7px 7px}' +
+    '.tbBlock:hover .tbHandle{background:rgba(255,255,255,.72)}' +
+    '.tbBlock.sm .tbHandle{height:6px}' +
+    '.tbTrash{position:absolute;right:4px;bottom:4px;width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#fff;border:1.5px dashed #deded6;color:#b5b5ad;opacity:0;transform:scale(.88);transition:opacity .18s,transform .18s,background .18s,border-color .18s,color .18s;pointer-events:none;z-index:11}' +
+    '.tbTrash.on{opacity:.92;transform:scale(1)}' +
+    '.tbTrash.hot{background:#fdeeec;border-color:#e09284;color:#c3493a;transform:scale(1.14);opacity:1;border-style:solid}' +
+    '.tbTrash svg{width:18px;height:18px;display:block}' +
     '';
 
   if (!document.getElementById('tbEditCss')) {
