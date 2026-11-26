@@ -1556,5 +1556,17 @@ $('#folderTree').addEventListener('contextmenu', e => {
 
 (async function init() {
   await loadTree();
+  var qp = new URLSearchParams(location.search).get("path");
+  var qv = new URLSearchParams(location.search).get("view");
+  if (qp) { await openArticle(qp); return; }
+  if (qv === "graph") { await openGraph(); return; }
+  /* 什么都不带打开时：直接进最新一篇，而不是首页列表 */
+  var all = flattenArticles(state.tree);
+  var latest = all.slice().sort(function (a, b) {
+    return (b.updated || b.mtime || 0) - (a.updated || a.mtime || 0);
+  })[0];
+  if (latest && latest.path) {
+    try { await openArticle(latest.path); return; } catch (e) {}
+  }
   openHome();
 })();
