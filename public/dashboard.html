@@ -115,6 +115,8 @@ html.embed .topback{display:none!important}
 .navpill a:hover{background:#fff}
 .addbtn{margin-left:auto;border:1px solid var(--ember);background:var(--ember);color:#fff;border-radius:200px;padding:9px 20px;font-size:14px;font-family:var(--body);cursor:pointer;transition:.16s;white-space:nowrap}
 .addbtn:hover{background:#2b7fa6;border-color:#2b7fa6}
+.repoLink{font-size:13px;color:var(--slate);text-decoration:none;border:1px solid #d8d8d3;border-radius:200px;padding:6px 14px;transition:.16s;white-space:nowrap}
+.repoLink:hover{color:var(--graphite);border-color:#b9b9b3;background:#fff}
 @media(max-width:760px){.addbtn{margin-left:8px;padding:8px 14px;font-size:13px}}
 .btn-solid{background:var(--graphite);color:#fff;border:0;border-radius:0;padding:11px 20px;font-family:var(--head);font-size:15px;letter-spacing:-.02em;cursor:pointer;transition:background .18s}
 .btn-solid:hover{background:#000}
@@ -484,6 +486,7 @@ html,body{overflow-x:hidden}
   <div class="wrap navin">
     <div class="navleft">
       <div class="brand">清溯 Zora<em>DATA</em></div>
+        <a class="repoLink" href="/repo" title="回到仓库文档">仓库</a>
     </div>
       <div class="navpill">
         <a href="#tasks">待办</a><a href="#today">评分</a><a href="#meals">吃了</a><a href="#about">画像</a>
@@ -1280,58 +1283,6 @@ function toast(msg){
   clearTimeout(toastTimer);toastTimer=setTimeout(function(){t.classList.remove('on');},2200);
 }
 
-/* 右键菜单 */
-const menuEl=document.getElementById('menu');
-let menuDate=null;
-document.getElementById('tbody').addEventListener('contextmenu',function(e){
-  const tr=e.target.closest('tr[data-d]');if(!tr)return;
-  e.preventDefault();menuDate=tr.dataset.d;
-  menuEl.innerHTML='<button data-a="edit">编辑这一天</button>'+
-    '<button data-a="clear">清空重写</button>'+
-    '<button data-a="copy">复制一份</button>'+
-    '<button data-a="del">删除这一天</button>';
-  menuEl.style.display='block';
-  const w=menuEl.offsetWidth,h=menuEl.offsetHeight;
-  menuEl.style.left=Math.max(10,Math.min(e.clientX,window.innerWidth-w-10))+'px';
-  menuEl.style.top=Math.max(10,Math.min(e.clientY,window.innerHeight-h-10))+'px';
-});
-document.addEventListener('click',function(e){
-  if(!menuEl.contains(e.target)) menuEl.style.display='none';
-});
-window.addEventListener('scroll',function(){menuEl.style.display='none';},{passive:true});
-
-menuEl.addEventListener('click',function(e){
-  const b=e.target.closest('button[data-a]');if(!b)return;
-  const a=b.dataset.a,d=menuDate;
-  menuEl.style.display='none';
-  if(!d)return;
-  if(a==='edit'){openDrawer(d);}
-  else if(a==='clear'){
-    const i=state.records.findIndex(function(x){return x.date===d;});
-    if(i>=0){state.records[i]=blankRecord(d);save();renderAll();}
-    openDrawer(d);
-    toast('已清空 '+short(d)+'，重新填吧');
-  }
-  else if(a==='copy'){
-    const src=state.records.find(function(x){return x.date===d;});
-    if(!src)return;
-    const c=clone(src);
-    c.date=dateShift(1);
-    editDate=null;
-    state.records.push(c);save();renderAll();openDrawer(c.date);
-    toast('复制了一份，改日期再保存');
-  }
-  else if(a==='del'){
-    const i=state.records.findIndex(function(x){return x.date===d;});
-    if(i>=0){state.records.splice(i,1);save();renderAll();toast('已删除 '+short(d));}
-  }
-});
-
-/* 表格单击 */
-document.getElementById('tbody').addEventListener('click',function(e){
-  const tr=e.target.closest('tr[data-d]');if(!tr)return;
-  openDrawer(tr.dataset.d);
-});
 /* 生理数据点格子 */
 var _bg=document.getElementById('bodyGrid');if(_bg)_bg.addEventListener('click',function(){
   const r=latest();if(r)openDrawer(r.date);
@@ -1509,7 +1460,7 @@ function renderAbout(){
   if(sel) F_BODY.forEach(function(f){
     const o=document.createElement('option');o.value=f.k;o.textContent=f.n;sel.appendChild(o);
   });
-  sel.value='waist';
+  if(sel) sel.value='waist';
   renderAbout();
   renderAll();
 })();

@@ -325,7 +325,7 @@ const MIME = {
 
 function serveStatic(res, absFile) {
   const ext = path.extname(absFile).toLowerCase();
-  res.writeHead(200, { 'Content-Type': MIME[ext] || 'application/octet-stream' });
+  res.writeHead(200, { 'Content-Type': MIME[ext] || 'application/octet-stream', 'Cache-Control': 'no-cache' });
   fs.createReadStream(absFile).pipe(res);
 }
 
@@ -607,6 +607,9 @@ const server = http.createServer(async (req, res) => {
       return await api(req, res, url);
     }
     if (url.pathname === '/') {
+      return serveStatic(res, path.join(PUBLIC_DIR, 'dashboard.html'));
+    }
+    if (url.pathname === '/repo') {
       return serveStatic(res, path.join(PUBLIC_DIR, 'classic.html'));
     }
     if (url.pathname === '/index.html') {

@@ -129,7 +129,7 @@
   d.addEventListener('click', function (e) {
     var t = e.target.closest ? e.target.closest('button,a') : null;
     if (t) {
-      if (t.id === 'rbStatus' || t.id === 'btnStatus') { openStage(); return; }
+      if (t.id === 'rbStatus' || t.id === 'btnStatus') { location.href = '/'; return; }
       if (t.id === 'rbQuick' || t.id === 'btnQuick') { openNote(); return; }
       if (t.id === 'kbNoteSave') { saveNote(); return; }
       if (t.id === 'kbNoteCancel') { closeNote(); return; }
