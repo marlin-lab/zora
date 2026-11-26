@@ -86,11 +86,16 @@
   --body:"Inter","Segoe UI","Microsoft YaHei","PingFang SC",sans-serif;
 }
 html.embed nav{display:none!important}
-html.embed #fab{display:flex}
+html.embed #fab{display:flex;width:44px;height:44px;padding:0;justify-content:center;right:22px;bottom:22px;box-shadow:0 5px 16px rgba(28,28,26,.16);opacity:.94}
+html.embed #fab span{display:none}
+html.embed #fab:hover{opacity:1}
 html.embed body{background:#fefffc}
 /* 嵌进总览页时只留有信息量的部分：日志/指标管理/设置/关于留在独立页面 */
 html.embed #records,html.embed #journal,html.embed #metrics,html.embed #settings,html.embed footer{display:none!important}
-html.embed .hero{align-items:start;padding-top:8px;padding-bottom:16px}
+html.embed .hero{align-items:start;padding-top:56px;padding-bottom:28px}
+html.embed .band{padding:56px 0}
+html.embed .sec{padding:56px 0}
+html.embed .sec.wrap{padding-left:40px;padding-right:40px}
 html.embed .heroR{min-height:0;justify-content:flex-start;gap:12px;display:grid;grid-template-columns:1fr 1fr;align-items:stretch}
 html.embed .heroR .dcard{width:auto!important;padding:16px 18px}
 html.embed .heroR .dcard:nth-child(3){grid-column:1/-1}
@@ -124,7 +129,7 @@ html.embed .topback{display:none!important}
 .btn-line:hover{border-color:var(--ember);color:var(--ember)}
 
 .hero{display:grid;grid-template-columns:1.02fr .98fr;gap:24px;align-items:center;padding-top:40px;padding-bottom:48px}
-.eyebrow{display:block;font-family:var(--head);font-size:13px;color:var(--brass);letter-spacing:.06em;margin-bottom:24px}
+.eyebrow{display:block;font-family:var(--head);font-size:13px;color:var(--brass);letter-spacing:.06em;margin-bottom:22px}
 h1{margin:0;font-family:var(--head);font-weight:400;font-size:66px;line-height:.94;letter-spacing:-.02em}
 h1 small{display:block;font-family:var(--head);font-weight:400;font-size:30px;color:var(--steel);letter-spacing:-.015em;margin-top:16px;line-height:1.2}
 .lede{margin:26px 0 32px;max-width:442px;font-size:18px;line-height:1.45;color:var(--steel)}
@@ -515,7 +520,7 @@ html,body{overflow-x:hidden}
     </div><button class="addbtn" id="navAddTodo">＋ 加待办</button>
   </div>
 </nav>
-<button id="fab" type="button"><i>＋</i>加待办</button>
+<button id="fab" type="button" title="加待办"><i>＋</i><span>加待办</span></button>
 
 
 <header class="hero wrap">
