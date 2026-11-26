@@ -515,34 +515,32 @@ html,body{overflow-x:hidden}
       <div class="brand">清溯 Zora<em>DATA</em></div>
     </div>
       <div class="navpill">
-        <a href="#tasks">待办</a><a href="#today">评分</a><a href="#meals">吃了</a><a href="#about">画像</a>
+        <a href="#timeline">时间轴</a><a href="#tasks">待办</a><a href="#meals">吃了</a><a href="#about">画像</a>
     </div><button class="addbtn" id="navAddTodo">＋ 加待办</button>
   </div>
 </nav>
 <button id="fab" type="button" title="加待办"><i>＋</i><span>加待办</span></button>
 
 
-<header class="hero wrap">
-  <div class="heroMeta"><b id="heroCount">0</b> 天记录 · 最新 <b id="heroDate">—</b></div>
-  <div class="heroR">
-    <div class="dcard a">
-      <div class="dcap">今日综合评分</div>
-      <div class="dnum tnum"><b id="compBig">—</b><u>/ 100</u></div>
-      <div class="stack" id="heroStack"></div>
-      <div class="legend" id="heroLegend"></div>
+<header class="hero wrap" id="timeline">
+  <div class="heroMeta"><b id="tlDate">—</b> · <b id="tlTotal">0 min</b> 有记录</div>
+  <div class="tlwrap">
+    <div class="tlCol">
+      <div class="tlHead"><span>时间轴</span><button class="tlAdd" id="tlAddBtn" type="button">＋ 记一段</button></div>
+      <div class="tlAddBox" id="tlAddBox" style="display:none">
+        <input id="tlInput" placeholder="现在在做什么？回车记下">
+      </div>
+      <div class="tlList" id="tlList"></div>
     </div>
-    <div class="dcard b">
-      <div class="dcap">睡眠</div>
-      <div class="dnum tnum"><b id="hSleep">—</b><u>/ 100</u></div>
-      <div class="dsub">深睡 <b id="hDeep">—</b></div>
-      <div class="dfoot"><b id="capCount">0</b> 条记录 · 电脑与手机共用一份</div>
-      <div class="dbar"><span id="sleepBar"></span></div>
-    </div>
-    <div class="dcard c">
-      <div class="dcap">今天写出了多少</div>
-      <div class="dnum tnum"><b id="hWeight">—</b><u>条</u></div>
-      <div class="dsub" id="hDelta">—</div>
-      <canvas class="mini" id="cvMini"></canvas>
+    <div class="tlSide">
+      <div class="breakCard">
+        <div class="bcap">今天的时间花在</div>
+        <div class="donutWrap">
+          <div class="donut" id="donut"></div>
+          <div class="donutCore"><span>Total</span><b id="dnTotal">0 min</b></div>
+        </div>
+        <div id="dnLegend"></div>
+      </div>
     </div>
   </div>
 </header>
@@ -629,7 +627,6 @@ html,body{overflow-x:hidden}
   <div class="fGroup">
     <div class="gt">Scores · 三项评分</div>
     <div class="fGrid">
-      <div class="fld"><label>学习深度</label><input type="number" id="fStudy" placeholder="0-100"></div>
       <div class="fld"><label>爱好</label><input type="number" id="fHobby" placeholder="0-100"></div>
       <div class="fld"><label>轻松程度</label><input type="number" id="fRelax" placeholder="0-100"></div>
     </div>
@@ -775,7 +772,7 @@ const latest=()=>{const rs=sorted();return rs[rs.length-1]||null;};
 const nz=v=>(v===null||v===undefined||v==='')?null:v;
 function comp(r){
   if(!r) return null;
-  const p=[[r.sleep.score,30],[r.scores.study,30],[r.scores.hobby,20],[r.scores.relax,20]];
+  const p=[[r.sleep.score,40],[r.scores.hobby,30],[r.scores.relax,30]];
   const ok=p.filter(x=>x[0]!==null&&x[0]!==undefined&&x[0]!=='');
   if(!ok.length) return null;
   const w=ok.reduce((s,x)=>s+x[1],0);
@@ -907,9 +904,9 @@ function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'
 
 function renderAll(){
   const rs=sorted(),r=rs[rs.length-1];
-  document.getElementById('heroCount').textContent=state.records.length;
-  document.getElementById('heroDate').textContent=r?short(r.date):'—';
-  document.getElementById('capCount').textContent=state.records.length;
+  var _hc=document.getElementById('heroCount'); if(_hc) _hc.textContent=state.records.length;
+  var _hd=document.getElementById('heroDate'); if(_hd) _hd.textContent=r?short(r.date):'—';
+  var _cc2=document.getElementById('capCount'); if(_cc2) _cc2.textContent=state.records.length;
   renderToday(r);renderMeals(rs);
   renderTodos();renderCal(rs);
 }
@@ -955,8 +952,7 @@ function addMeal(){
 function renderToday(r){
   const c=comp(r);
   const cb=document.getElementById('compBig'); if(cb) cb.textContent=c===null?'—':c;
-  const defs=[['睡眠',r&&r.sleep.score,30,'#41a1cf'],['学习深度',r&&r.scores.study,30,'#2b7fa6'],
-              ['爱好',r&&r.scores.hobby,20,'#7cb7d3'],['轻松',r&&r.scores.relax,20,'#202020']];
+  const defs=[['睡眠',r&&r.sleep.score,40,'#41a1cf'],['爱好',r&&r.scores.hobby,30,'#7cb7d3'],['轻松',r&&r.scores.relax,30,'#202020']];
 
   /* 数据墙 · 评分拆解成一条堆叠条 + 图例 */
   const hs=document.getElementById('heroStack'), hl=document.getElementById('heroLegend');
@@ -1046,7 +1042,6 @@ function renderTable(rs){
       '<td class="tnum">'+cell(r.sleep.score)+'</td>'+
       '<td class="tnum">'+cell(r.sleep.deep)+'</td>'+
       '<td class="tnum">'+cell(r.sleep.hours)+'</td>'+
-      '<td class="tnum">'+cell(r.scores.study)+'</td>'+
       '<td class="tnum">'+cell(r.scores.hobby)+'</td>'+
       '<td class="tnum">'+cell(r.scores.relax)+'</td>'+
       '<td class="tnum">'+cell(r.weight)+'</td>'+
@@ -1208,7 +1203,7 @@ function openDrawer(date){
   setVal('fWeight',r.weight);setVal('fSleep',r.sleep.score);setVal('fHours',r.sleep.hours);
   setVal('fDeep',r.sleep.deep);setVal('fSteps',r.steps);
   F_BODY.forEach(function(f){setVal('fb_'+f.k,r.body[f.k]);});
-  setVal('fStudy',r.scores.study);setVal('fHobby',r.scores.hobby);setVal('fRelax',r.scores.relax);
+  setVal('fHobby',r.scores.hobby);setVal('fRelax',r.scores.relax);
   setVal('fMorning',r.morning);setVal('fDoing',r.doing);setVal('fMood',r.mood);setVal('fReview',r.review);
   MEALS.forEach(function(n,i){
     const m=(r.meals||[]).filter(function(x){return x.name===n;})[0];
@@ -1240,7 +1235,7 @@ function saveDay(){
   r.sleep.score=numOf('fSleep');r.sleep.hours=numOf('fHours');r.sleep.deep=numOf('fDeep');
   r.steps=numOf('fSteps');
   F_BODY.forEach(function(f){r.body[f.k]=numOf('fb_'+f.k);});
-  r.scores.study=numOf('fStudy');r.scores.hobby=numOf('fHobby');r.scores.relax=numOf('fRelax');
+  r.scores.hobby=numOf('fHobby');r.scores.relax=numOf('fRelax');
   r.morning=val('fMorning');r.doing=val('fDoing');r.mood=val('fMood');r.review=val('fReview');
   r.meals=MEALS.map(function(n,i){
     return {name:n,desc:val('fm_'+i),kcal:numOf('fk_'+i)||0};
@@ -1516,7 +1511,6 @@ function renderAbout(){
     {k:'deep',n:'深睡占比',u:'%',ref:'26–39',board:0},
     {k:'steps',n:'步数',u:'步',ref:'≥6000',board:1},
     {k:'kcal',n:'热量',u:'kcal',ref:'1600–2000',board:0},
-    {k:'study',n:'学习深度',u:'分',ref:'0–100',board:1},
     {k:'hobby',n:'爱好',u:'分',ref:'0–100',board:0},
     {k:'relax',n:'轻松程度',u:'分',ref:'0–100',board:0},
     {k:'studyMin',n:'学习时长',u:'分钟',ref:'—',board:0},
@@ -1551,7 +1545,6 @@ function renderAbout(){
     if(k==='deep') return r.sleep?r.sleep.deep:null;
     if(k==='steps') return r.steps;
     if(k==='kcal') return r.cal;
-    if(k==='study') return r.scores?r.scores.study:null;
     if(k==='hobby') return r.scores?r.scores.hobby:null;
     if(k==='relax') return r.scores?r.scores.relax:null;
     if(BM.indexOf(k)>=0) return r.body?r.body[k]:null;
@@ -1686,7 +1679,6 @@ function renderAbout(){
       else if(it.k==='deep') r.sleep.deep=v;
       else if(it.k==='steps') r.steps=v;
       else if(it.k==='kcal') r.cal=v;
-      else if(it.k==='study') r.scores.study=v;
       else if(it.k==='hobby') r.scores.hobby=v;
       else if(it.k==='relax') r.scores.relax=v;
       else if(BM.indexOf(it.k)>=0) r.body[it.k]=v;
@@ -2199,6 +2191,49 @@ html.embed .hero{padding-top:88px}
 html.embed .heroR .dcard:nth-child(3){grid-column:auto}
 @media (prefers-reduced-motion: reduce){ .stack span,.dbar span{animation:none!important;transition:none!important} }
 
+
+/* ---- 时间轴 + 环形（左轴右环） ---- */
+.tlwrap{display:grid;grid-template-columns:minmax(0,1fr) 288px;gap:32px;align-items:start}
+@media(max-width:920px){.tlwrap{grid-template-columns:1fr}}
+.tlCol{min-width:0}
+.tlHead{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.tlHead span{font-size:12px;color:#a0a09a;letter-spacing:.1em}
+.tlAdd{border:1px solid #e3e6e1;background:#fff;border-radius:100px;padding:6px 14px;font-size:12.5px;color:#3a3a37;cursor:pointer;font-family:inherit;transition:border-color .18s,color .18s}
+.tlAdd:hover{border-color:#2c2c2c;color:#141412}
+.tlAddBox{margin:0 0 16px}
+.tlAddBox input{width:100%;box-sizing:border-box;border:1px solid #e3e6e1;border-radius:11px;padding:11px 14px;font-size:14px;font-family:inherit;outline:none;background:#fbfbf9;color:#22221f}
+.tlAddBox input:focus{border-color:#41a1cf;background:#fff}
+.tlList{position:relative}
+.tlRow{display:flex;gap:11px;align-items:flex-start;padding-bottom:9px;animation:tlIn .36s cubic-bezier(.2,.8,.2,1) both}
+.tlRow:nth-child(1){animation-delay:0s}.tlRow:nth-child(2){animation-delay:.05s}.tlRow:nth-child(3){animation-delay:.1s}
+.tlRow:nth-child(4){animation-delay:.15s}.tlRow:nth-child(5){animation-delay:.2s}.tlRow:nth-child(n+6){animation-delay:.24s}
+@keyframes tlIn{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:none}}
+.tlTime{width:44px;flex:0 0 44px;text-align:right;font-size:12px;color:#a8a8a3;padding-top:16px;font-variant-numeric:tabular-nums}
+.tlRail{width:13px;flex:0 0 13px;position:relative;align-self:stretch}
+.tlDot{position:absolute;top:20px;left:3px;width:7px;height:7px;border-radius:50%;background:#cfd3cc}
+.tlDot.on{background:#2c2c2c}
+.tlRail:after{content:"";position:absolute;left:6px;top:29px;bottom:-3px;width:1px;background:#eceee9}
+.tlRow:last-child .tlRail:after{display:none}
+.tlCard{flex:1;min-width:0;border-radius:12px;padding:11px 15px 12px;border:1px solid rgba(0,0,0,.045);transition:transform .2s cubic-bezier(.2,.8,.2,1),box-shadow .2s}
+.tlCard:hover{transform:translateX(3px);box-shadow:0 3px 14px rgba(0,0,0,.055)}
+.tlCard h4{margin:0;font-size:14px;font-weight:500;color:#22221f;line-height:1.52;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.tlCard p{margin:5px 0 0;font-size:11.5px;color:#93938d;letter-spacing:.02em;font-variant-numeric:tabular-nums}
+.tlEmpty{padding:64px 0;text-align:center;color:#aeaea8;font-size:13px;line-height:2}
+.breakCard{background:#fff;border:1px solid #f0f1ec;border-radius:18px;padding:22px 20px 18px;box-shadow:0 1px 2px rgba(0,0,0,.03)}
+.bcap{font-size:12px;color:#a0a09a;letter-spacing:.06em;margin-bottom:18px}
+.donutWrap{position:relative;width:100%;max-width:210px;aspect-ratio:1/1;margin:0 auto 18px}
+.donut{position:absolute;inset:0;border-radius:50%;background:#f3f4f0;transition:background .5s ease}
+.donut:after{content:"";position:absolute;inset:32px;background:#fff;border-radius:50%}
+.donutCore{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:2}
+.donutCore span{font-size:10px;color:#aeaea8;letter-spacing:.16em;text-transform:uppercase}
+.donutCore b{font-size:17px;font-weight:600;color:#22221f;font-variant-numeric:tabular-nums;margin-top:4px;letter-spacing:-.01em}
+#dnLegend{display:flex;flex-direction:column;gap:8px}
+#dnLegend span{display:flex;align-items:center;gap:8px;font-size:12px;color:#6f6f69}
+#dnLegend i{width:7px;height:7px;border-radius:50%;flex:0 0 7px}
+#dnLegend b{margin-left:auto;font-weight:500;color:#22221f;font-variant-numeric:tabular-nums;font-size:11.5px}
+#dnLegend em{font-style:normal;color:#a0a09a;font-size:11px;max-width:118px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+@media(prefers-reduced-motion:reduce){.tlRow{animation:none}.tlCard{transition:none}}
+
 </style>
 
 <script>
@@ -2218,6 +2253,132 @@ html.embed .heroR .dcard:nth-child(3){grid-column:auto}
         + '<span>'+esc(s)+'</span></a>';
     }).join('');
   }).catch(function(){ box.innerHTML='<p class="note">读不到仓库。</p>'; });
+})();
+</script>
+
+<script>
+/* ===== 时间轴：读当天小记的 ## HH:MM 段，左轴 + 右环 ===== */
+(function(){
+  var COLORS=['#fdf2df','#e9f1fa','#fbecec','#eaf3ea','#f2f2ed','#f6eee7'];
+  var RING=['#41a1cf','#8578dd','#e07a5f','#4ea36c','#c9a227','#7cb7d3'];
+  function pad(n){return (n<10?'0':'')+n;}
+  function ymd(){var d=new Date();return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());}
+  function toMin(t){var p=t.split(':');return (+p[0])*60+(+p[1]);}
+  function addMin(t,m){var x=toMin(t)+m;return pad(Math.floor(x/60)%24)+':'+pad(x%60);}
+  function fmtDur(m){if(!m)return '0 min';var h=Math.floor(m/60),r=m%60;if(!h)return r+' min';return h+' hr'+(r?' '+r+' min':'');}
+  function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+  function notePath(){return 'me/小记-'+ymd()+'.md';}
+
+  function parseMd(md){
+    var ls=String(md).split(/\r?\n/),out=[],cur=null;
+    ls.forEach(function(l){
+      var m=l.match(/^##\s*([0-9]{1,2}):([0-9]{2})\s*(.*)$/);
+      if(m){cur={t:pad(+m[1])+':'+m[2],head:m[3]||'',lines:[]};out.push(cur);return;}
+      if(/^#\s/.test(l)){cur=null;return;}
+      if(cur&&l.trim())cur.lines.push(l.trim());
+    });
+    return out.map(function(s){
+      var t=s.head||(s.lines[0]||'')||'（没写）';
+      t=t.replace(/^[-*+]\s*/,'').replace(/\*\*/g,'').replace(/<[^>]*>/g,'').replace(/&nbsp;/g,' ').trim();
+      return {t:s.t,title:t};
+    });
+  }
+
+  function render(list){
+    var el=document.getElementById('tlList');if(!el)return;
+    var dn=document.getElementById('donut'),tbt=document.getElementById('dnTotal'),lg=document.getElementById('dnLegend');
+    var dt=document.getElementById('tlDate'),tt=document.getElementById('tlTotal');
+    var d=new Date();if(dt)dt.textContent=pad(d.getMonth()+1)+'.'+pad(d.getDate());
+
+    if(!list.length){
+      el.innerHTML='<div class="tlEmpty">今天还没有记录。<br>点右上角「记一段」，先用一句写下此刻在做什么。</div>';
+      if(dn)dn.style.background='#f3f4f0';
+      if(tbt)tbt.textContent='0 min';
+      if(lg)lg.innerHTML='';
+      if(tt)tt.textContent='0 min';
+      return;
+    }
+
+    var segs=list.map(function(s,i){
+      var nx=list[i+1],gap=null;
+      if(nx){ gap=toMin(nx.t)-toMin(s.t); }
+      else { var nw=new Date(); gap=(nw.getHours()*60+nw.getMinutes())-toMin(s.t); }
+      var dur=(gap!==null&&gap>0&&gap<=480)?gap:null;
+      return {t:s.t,title:s.title,dur:dur};
+    });
+    var total=segs.reduce(function(a,b){return a+(b.dur||0);},0);
+
+    el.innerHTML=segs.map(function(s,i){
+      var sub=s.t+(s.dur!==null?('  –  '+addMin(s.t,s.dur)+'   ·   约 '+fmtDur(s.dur)):'');
+      return '<div class="tlRow">'+
+        '<div class="tlTime">'+s.t+'</div>'+
+        '<div class="tlRail"><i class="tlDot'+(s.dur!==null?' on':'')+'"></i></div>'+
+        '<div class="tlCard" style="background:'+COLORS[i%COLORS.length]+'"><h4>'+esc(s.title)+'</h4><p>'+esc(sub)+'</p></div>'+
+      '</div>';
+    }).join('');
+
+    if(tt)tt.textContent=fmtDur(total);
+    if(tbt)tbt.textContent=fmtDur(total);
+    var valid=segs.filter(function(s){return s.dur!==null;});
+    if(!valid.length){
+      if(dn)dn.style.background='conic-gradient(#e9ebe6 0 100%)';
+      if(lg)lg.innerHTML='<span><i style="background:#e9ebe6"></i>还没有连续的两段</span>';
+      return;
+    }
+    var stops=[],acc=0;
+    valid.forEach(function(s,i){
+      var a=acc/total*100,b=(acc+s.dur)/total*100;
+      stops.push(RING[i%RING.length]+' '+a.toFixed(2)+'% '+(Math.max(a,b-0.6)).toFixed(2)+'%');
+      stops.push('#ffffff '+(Math.max(a,b-0.6)).toFixed(2)+'% '+b.toFixed(2)+'%');
+      acc+=s.dur;
+    });
+    if(dn)dn.style.background='conic-gradient('+stops.join(',')+')';
+    if(lg)lg.innerHTML=valid.slice(0,6).map(function(s,i){
+      return '<span><i style="background:'+RING[i%RING.length]+'"></i><em>'+esc(s.title.slice(0,12))+'</em><b>'+fmtDur(s.dur)+'</b></span>';
+    }).join('');
+  }
+
+  function refresh(){
+    fetch('/api/article?path='+encodeURIComponent(notePath()))
+      .then(function(r){return r.ok?r.json():null;})
+      .then(function(j){render(parseMd((j&&j.content)||''));})
+      .catch(function(){render([]);});
+  }
+
+  function mark(txt){
+    var cur=null;
+    fetch('/api/article?path='+encodeURIComponent(notePath()))
+      .then(function(r){return r.ok?r.json():null;})
+      .then(function(j){
+        cur=(j&&j.content)||'';
+        var n=new Date(),hh=pad(n.getHours())+':'+pad(n.getMinutes());
+        var nc=(cur?cur.replace(/\s+$/,'')+'\n\n':'# 小记 '+ymd()+'\n\n')+'## '+hh+'\n'+txt+'\n';
+        return cur
+          ? fetch('/api/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({path:notePath(),content:nc})})
+          : fetch('/api/upload',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({folder:'me',name:'小记-'+ymd()+'.md',content:nc})});
+      })
+      .then(function(r){if(!r||!r.ok)throw 0;refresh();})
+      .catch(function(){var tip=document.getElementById('tlInput');if(tip)tip.value=txt;});
+  }
+
+  var btn=document.getElementById('tlAddBtn'),box=document.getElementById('tlAddBox'),inp=document.getElementById('tlInput');
+  if(btn&&box){
+    btn.addEventListener('click',function(){
+      var on=box.style.display!=='none';
+      box.style.display=on?'none':'block';
+      if(!on&&inp){inp.value='';inp.focus();}
+    });
+  }
+  if(inp){
+    inp.addEventListener('keydown',function(e){
+      if(e.key!=='Enter')return;
+      var v=inp.value.trim();if(!v)return;
+      inp.value='';mark(v);
+      if(box)box.style.display='none';
+    });
+  }
+
+  refresh();
 })();
 </script>
 </body>
