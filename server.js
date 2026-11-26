@@ -76,6 +76,54 @@ function readBody(req) {
   });
 }
 
+/* 按文件名里的日期排（10.4 / 4.9.2 / 小记-2026-11-26），认不出日期的排到最后 */
+function nameDateKey(name) {
+  const base = name.replace(/\.md$/i, '');
+  let m = base.match(/^(\d{1,2})\.(\d{1,2})(?:\.(\d{1,2}))?/);
+  if (m) return [parseInt(m[1], 10), parseInt(m[2], 10), m[3] ? parseInt(m[3], 10) : 0];
+  m = base.match(/(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (m) return [parseInt(m[2], 10), parseInt(m[3], 10), 0];
+  return [99, 99, 0];
+}
+function cmpByDate(a, b) {
+  const A = nameDateKey(a.name), B = nameDateKey(b.name);
+  for (let i = 0; i < 3; i++) if (A[i] !== B[i]) return A[i] - B[i];
+  return String(a.name).localeCompare(String(b.name), 'zh');
+}
+/* ---------------- 最后修改时间（存在本地的 .editmeta.json） ---------------- */
+
+const EDIT_META = path.join(DATA_DIR, '.editmeta.json');
+let _metaCache = null, _metaStamp = -1;
+function readEditMeta() {
+  const st = statSafe(EDIT_META);
+  const stamp = st ? st.mtimeMs : 0;
+  if (_metaCache && _metaStamp === stamp) return _metaCache;
+  try { _metaCache = JSON.parse(fs.readFileSync(EDIT_META, 'utf8')) || {}; } catch { _metaCache = {}; }
+  _metaStamp = stamp;
+  return _metaCache;
+}
+function writeEditMeta(map) {
+  _metaCache = map;
+  fs.writeFileSync(EDIT_META, JSON.stringify(map), 'utf8');
+  const st = statSafe(EDIT_META);
+  _metaStamp = st ? st.mtimeMs : 0;
+}
+function touchEditMeta(rel) {
+  const key = String(rel).replace(/\\/g, '/');
+  const m = readEditMeta();
+  m[key] = Date.now();
+  writeEditMeta(m);
+}
+function dropEditMeta(rel) {
+  const key = String(rel).replace(/\\/g, '/');
+  const m = readEditMeta();
+  if (key in m) { delete m[key]; writeEditMeta(m); }
+}
+function nameDateMs(name) {
+  const k = nameDateKey(name);
+  if (k[0] === 99) return 0;
+  return Date.UTC(2026, k[0] - 1, k[1], 12, 0, 0) + k[2] * 1000;
+}
 /* ---------------- 目录树 / 分区 ---------------- */
 
 function scanDir(absDir, relDir) {
@@ -97,12 +145,13 @@ function scanDir(absDir, relDir) {
         snippet: meta ? meta.head : '',
         date: meta ? meta.date : '',
         tags: meta ? meta.tags : [],
-        mtime: st ? st.mtimeMs : 0
+        mtime: st ? st.mtimeMs : 0,
+        updated: (readEditMeta()[relChild.replace(/\\/g, '/')]) || Math.max(nameDateMs(ent.name), st ? st.mtimeMs : 0)
       });
     }
   }
   out.folders.sort((a, b) => a.name.localeCompare(b.name, 'zh'));
-  out.articles.sort((a, b) => b.mtime - a.mtime);
+  out.articles.sort((a, b) => (b.updated - a.updated) || -cmpByDate({ name: path.basename(a.path) }, { name: path.basename(b.path) }));
   return out;
 }
 
@@ -452,6 +501,7 @@ async function api(req, res, url) {
     fs.writeFileSync(abs, String(body.content || ''), 'utf8');
     indexer.invalidate();
     const rel = path.relative(DATA_DIR, abs).replace(/\\/g, '/');
+    touchEditMeta(rel);
     broadcast({ type: 'articles', at: Date.now(), path: rel });
     return sendJSON(res, 200, { ok: true, path: rel });
   }
@@ -462,6 +512,7 @@ async function api(req, res, url) {
     if (!abs || !isTextFile(abs)) return sendJSON(res, 400, { error: 'bad path' });
     fs.writeFileSync(abs, String(body.content ?? ''), 'utf8');
     indexer.invalidate();
+    touchEditMeta(body.path);
     broadcast({ type: 'articles', at: Date.now(), path: body.path });
     return sendJSON(res, 200, { ok: true });
   }
@@ -478,6 +529,15 @@ async function api(req, res, url) {
     ensureDir(toFolderAbs);
     fs.renameSync(fromAbs, target);
     indexer.invalidate();
+    {
+      const oldRel = String(body.from || '').replace(/\\/g, '/');
+      const newRel = path.relative(DATA_DIR, target).replace(/\\/g, '/');
+      const m = readEditMeta();
+      const t = m[oldRel] || nameDateMs(path.basename(target)) || Date.now();
+      delete m[oldRel];
+      m[newRel] = t;
+      writeEditMeta(m);
+    }
     broadcast({ type: 'articles', at: Date.now() });
     return sendJSON(res, 200, { ok: true, path: path.relative(DATA_DIR, target).replace(/\\/g, '/') });
   }
@@ -490,6 +550,12 @@ async function api(req, res, url) {
     if (!st) return sendJSON(res, 404, { error: 'not found' });
     if (st.isDirectory()) fs.rmSync(abs, { recursive: true, force: true });
     else fs.unlinkSync(abs);
+    {
+      const rel = String(body.path || '').replace(/\\/g, '/');
+      const m = readEditMeta();
+      for (const k of Object.keys(m)) if (k === rel || k.startsWith(rel + '/')) delete m[k];
+      writeEditMeta(m);
+    }
     indexer.invalidate();
     broadcast({ type: 'articles', at: Date.now() });
     return sendJSON(res, 200, { ok: true });
@@ -519,9 +585,11 @@ async function api(req, res, url) {
     if (!abs) return sendJSON(res, 500, { error: '导入失败' });
     if (body.b64) fs.writeFileSync(abs, Buffer.from(body.b64, 'base64'));
     else fs.writeFileSync(abs, String(body.content ?? ''), 'utf8');
+    const relUp = path.relative(DATA_DIR, abs).replace(/\\/g, '/');
+    touchEditMeta(relUp);
     indexer.invalidate();
     broadcast({ type: 'articles', at: Date.now() });
-    return sendJSON(res, 200, { ok: true, path: path.relative(DATA_DIR, abs).replace(/\\/g, '/') });
+    return sendJSON(res, 200, { ok: true, path: relUp });
   }
 
   return sendJSON(res, 404, { error: 'unknown api' });

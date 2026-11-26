@@ -78,3 +78,92 @@
 }
 .lico svg { width: 15px; height: 15px; }
 .lico:hover { background: #fff; color: var(--text); }
+/* 目录里的最后修改时间 */
+.tree-row .ago {
+  margin-left: auto; padding-left: 8px; flex-shrink: 0;
+  font-size: 11px; font-weight: 400; color: #ababab;
+  white-space: nowrap; letter-spacing: 0;
+}
+.tree-row.article-item.active .ago { color: #7fb6cf; }
+.tree-row:hover .ago { color: #8f8f8f; }
+
+/* 顶栏右侧：最后修改 */
+.edited { font-size: 12px; color: var(--text-3); margin-right: 16px; white-space: nowrap; }
+.tree-row:hover .ago { display: none; }
+
+/* ===== 首页：最近文章 ===== */
+.home { max-width: 880px; margin: 0 auto; padding: 52px 6px 140px; }
+.homeHead { margin-bottom: 42px; }
+.hh1 { font-family: var(--head); font-size: 42px; letter-spacing: -.02em; color: var(--text); }
+.hh2 { font-size: 13px; color: var(--text-2); margin-top: 10px; }
+.hh3 { font-size: 12.5px; color: var(--text-3); margin-top: 16px; }
+.hh0 { font-size: 14px; color: var(--text-2); }
+kbd {
+  display: inline-block; min-width: 18px; padding: 2px 5px; margin: 0 1px;
+  border: 1px solid #e4e4df; border-bottom-width: 2px; border-radius: 4px;
+  background: #fff; font-family: var(--body); font-size: 11px; color: var(--text-2);
+  text-align: center; line-height: 1.3;
+}
+.hgroup { margin-bottom: 36px; }
+.hgroup h2 {
+  display: flex; align-items: baseline; gap: 8px;
+  font-family: var(--head); font-size: 15.5px; font-weight: 400; color: var(--text);
+  letter-spacing: .02em; padding-bottom: 10px; border-bottom: 1px solid var(--border);
+}
+.hgroup h2 span { font-family: var(--body); font-size: 11.5px; color: var(--text-3); }
+.hlist { margin-top: 6px; }
+.hitem {
+  display: grid; grid-template-columns: minmax(0, 230px) 1fr auto;
+  gap: 18px; align-items: baseline;
+  padding: 11px 10px; border-radius: 8px; cursor: pointer;
+  transition: background .12s;
+}
+.hitem:hover { background: var(--accent-soft); }
+.hitem .ht { font-size: 14.5px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hitem:hover .ht { color: var(--accent-2); }
+.hitem .hs { font-size: 12.5px; color: var(--text-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hitem .hm { font-size: 11.5px; color: var(--text-3); white-space: nowrap; }
+.hmore { margin-top: 10px; padding-left: 10px; font-size: 12px; color: var(--text-3); cursor: pointer; }
+.hmore:hover { color: var(--accent); }
+@media (max-width: 760px) {
+  .home { padding: 30px 2px 100px; }
+  .hh1 { font-size: 30px; }
+  .hitem { grid-template-columns: 1fr auto; gap: 12px; }
+  .hitem .hs { display: none; }
+}
+
+/* ===== 命令面板 Ctrl+K ===== */
+.qs-mask {
+  position: fixed; inset: 0; z-index: 300; display: none;
+  background: rgba(30, 30, 28, .30); backdrop-filter: blur(2px);
+}
+.qs-mask.on { display: block; }
+.qs-box {
+  width: min(640px, calc(100% - 32px)); margin: 11vh auto 0;
+  background: #fff; border-radius: 14px; overflow: hidden;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, .2);
+}
+.qs-box input {
+  width: 100%; border: 0; outline: none; padding: 18px 22px;
+  font-family: var(--body); font-size: 16px; color: var(--text);
+  border-bottom: 1px solid #f0f0ec;
+}
+.qs-box input::placeholder { color: #bcbcb7; }
+.qs-list { max-height: 44vh; overflow-y: auto; }
+.qs-item {
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 150px) auto;
+  gap: 12px; align-items: baseline; padding: 11px 22px; cursor: pointer;
+}
+.qs-item.sel { background: var(--accent-soft); }
+.qs-item .qt { font-size: 14px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.qs-item.sel .qt { color: var(--accent-2); }
+.qs-item .qp { font-size: 11.5px; color: var(--text-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.qs-item .qm { font-size: 11.5px; color: var(--text-3); }
+.qs-empty { padding: 28px 22px; font-size: 13px; color: var(--text-2); }
+.qs-empty b { color: var(--accent-2); }
+.qs-foot {
+  display: flex; gap: 14px; align-items: center;
+  padding: 10px 22px; border-top: 1px solid #f2f2ee; background: #fcfcfa;
+  font-size: 11.5px; color: var(--text-3);
+}
+.qs-foot .qs-tip { margin-left: auto; }

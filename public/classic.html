@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>清溯 Zora · 编辑视图</title>
-  <link rel="stylesheet" href="/style.css">
-  <link rel="stylesheet" href="/skin.css">
+  <link rel="stylesheet" href="/style.css?v=1126b">
+  <link rel="stylesheet" href="/skin.css?v=1126b">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📚</text></svg>">
 </head>
 <body>
@@ -55,7 +55,7 @@
   <main class="main">
     <div class="topbar">
       <div class="crumb" id="crumb">清溯 Zora</div>
-      <div class="spacer"></div>
+      <div class="spacer"></div><div class="edited" id="editedAt"></div>
       <input type="file" id="importInput" webkitdirectory multiple hidden>
     </div>
     <div class="content" id="content"></div>
@@ -72,9 +72,9 @@
 
   <div class="toast-wrap" id="toastWrap"></div>
 
-  <script src="/marked.min.js"></script>
-  <script src="/app.js"></script>
-  <script src="/bridge.js"></script>
+  <script src="/marked.min.js?v=1126b"></script>
+  <script src="/app.js?v=1126b"></script>
+  <script src="/bridge.js?v=1126b"></script>
   <script>
   (function(){
     var q=new URLSearchParams(location.search);
@@ -106,12 +106,7 @@
         });
       }
     }
-    document.addEventListener('keydown',function(e){
-      if(e.key!=="Escape") return;
-      var t=e.target||{};
-      if(/INPUT|TEXTAREA|SELECT/i.test(t.tagName||"")||t.isContentEditable) return;
-      location.href='/#'+from;
-    });
+    
   })();
   </script>
 </body>

@@ -241,7 +241,7 @@ function renderTreeNode(node, depth) {
       html.push(`
         <div class="tree-row article-item folder-item${aActive ? ' active' : ''}${aCut}" data-article="${esc(a.path)}" style="padding-left:${pad + 14}px">
           <span class="chev hidden">▸</span>
-          <span class="name">${esc(a.title)}</span>
+          <span class="name">${esc(a.title)}</span><span class="ago">${fmtEdited(a.updated, true)}</span>
           <span class="tree-acts"><button data-act="more" title="更多">⋯</button></span>
         </div>`);
     }
@@ -405,14 +405,193 @@ function bindCards() {
   });
 }
 
+/* ---------------- 首页：最近文章 ---------------- */
+function dayBucket(ts) {
+  if (!ts) return 3;
+  const now = new Date();
+  const s0 = t => new Date(t.getFullYear(), t.getMonth(), t.getDate()).getTime();
+  const d = Math.round((s0(now) - s0(new Date(ts))) / 86400000);
+  if (d <= 0) return 0;
+  if (d === 1) return 1;
+  if (d < 7) return 2;
+  return 3;
+}
+const BUCKET_NAME = ['今天', '昨天', '本周', '更早'];
+
 function renderHome() {
-  $('#content').innerHTML = `
-    <div class="quote-hero">
-      <p>“We are not living to satisfy<br>the expectations of others.”</p>
-      <span class="quote-dash"></span>
+  const all = flattenArticles(state.tree || { folders: [], articles: [] });
+  const list = all.slice().sort((a, b) => (b.updated || 0) - (a.updated || 0));
+  const now = new Date();
+  const buckets = [[], [], [], []];
+  list.forEach(a => buckets[dayBucket(a.updated)].push(a));
+  const hitem = a => `
+    <div class="hitem" data-path="${esc(a.path)}">
+      <span class="ht">${esc(a.title)}</span>
+      <span class="hs">${esc((a.snippet || '').replace(/\s+/g, ' ').slice(0, 120))}</span>
+      <span class="hm">${fmtEdited(a.updated, true)}</span>
     </div>`;
+  const body = buckets.map((g, i) => {
+    if (!g.length) return '';
+    const capped = i === 3 && !state.homeMore;
+    const shown = capped ? g.slice(0, 12) : g;
+    const more = g.length - shown.length;
+    return `<section class="hgroup">
+      <h2>${BUCKET_NAME[i]}<span>${g.length}</span></h2>
+      <div class="hlist">${shown.map(hitem).join('')}</div>
+      ${more > 0 ? `<div class="hmore">还有 ${more} 篇</div>` : ''}
+    </section>`;
+  }).join('');
+  $('#content').innerHTML = `
+    <div class="home">
+      <div class="homeHead">
+        <div class="hh1">清溯 Zora</div>
+        <div class="hh2">${now.getMonth() + 1} 月 ${now.getDate()} 日 · 共 ${list.length} 篇</div>
+        <div class="hh3">按 <kbd>Ctrl</kbd> / <kbd>⌘</kbd> + <kbd>K</kbd> 直接找文章</div>
+      </div>
+      ${body || '<p class="hh0">还没有文章。点左上角的 ＋ 新建一篇。</p>'}
+    </div>`;
+  bindHome();
 }
 
+function bindHome() {
+  $('#content').querySelectorAll('.hitem').forEach(el => {
+    el.addEventListener('click', () => openArticle(el.dataset.path));
+    el.addEventListener('contextmenu', e => {
+      e.preventDefault(); e.stopPropagation();
+      const a = flattenArticles(state.tree).find(x => x.path === el.dataset.path);
+      articleMenu(el.dataset.path, a ? a.title : basename(el.dataset.path), e.clientX, e.clientY);
+    });
+  });
+  const more = $('#content').querySelector('.hmore');
+  if (more) more.addEventListener('click', () => { state.homeMore = true; renderHome(); });
+}
+
+/* ---------------- 命令面板：Ctrl+K 找文章（Obsidian Quick Switcher） ---------------- */
+let qsSel = 0, qsItems = [];
+
+function ensureQS() {
+  let m = document.getElementById('qsMask');
+  if (m) return m;
+  m = document.createElement('div');
+  m.id = 'qsMask';
+  m.className = 'qs-mask';
+  m.innerHTML = `<div class="qs-box">
+    <input id="qsInput" placeholder="搜索标题或路径…" autocomplete="off" spellcheck="false">
+    <div class="qs-list" id="qsList"></div>
+    <div class="qs-foot">
+      <span><kbd>↑</kbd><kbd>↓</kbd> 选</span>
+      <span><kbd>Enter</kbd> 打开</span>
+      <span><kbd>Esc</kbd> 关</span>
+      <span class="qs-tip">搜不到就回车新建</span>
+    </div>
+  </div>`;
+  document.body.appendChild(m);
+  m.addEventListener('mousedown', e => { if (e.target === m) closeQS(); });
+  const input = m.querySelector('#qsInput');
+  input.addEventListener('input', () => qsRender(input.value));
+  input.addEventListener('keydown', qsKey);
+  return m;
+}
+
+function openQS() {
+  const m = ensureQS();
+  m.classList.add('on');
+  const input = m.querySelector('#qsInput');
+  input.value = '';
+  qsRender('');
+  setTimeout(() => input.focus(), 20);
+}
+
+function closeQS() {
+  const m = document.getElementById('qsMask');
+  if (m) m.classList.remove('on');
+}
+
+function qsScore(q, a) {
+  const t = a.title.toLowerCase(), p = a.path.toLowerCase();
+  if (t.startsWith(q)) return 4;
+  if (t.includes(q)) return 3;
+  if (p.includes(q)) return 2;
+  let i = 0;
+  for (const ch of t) { if (ch === q[i]) i++; if (i >= q.length) return 1; }
+  return 0;
+}
+
+function qsRender(q) {
+  const all = flattenArticles(state.tree || { folders: [], articles: [] });
+  const qq = (q || '').trim().toLowerCase();
+  let items;
+  if (!qq) {
+    items = all.slice().sort((a, b) => (b.updated || 0) - (a.updated || 0)).slice(0, 10);
+  } else {
+    items = all.filter(a => qsScore(qq, a) > 0)
+      .sort((a, b) => (qsScore(qq, b) - qsScore(qq, a)) || (b.updated || 0) - (a.updated || 0))
+      .slice(0, 12);
+  }
+  qsItems = items;
+  qsSel = 0;
+  const el = document.getElementById('qsList');
+  if (!el) return;
+  if (!items.length) {
+    el.innerHTML = `<div class="qs-empty">没有匹配的。<b>回车</b>新建「${esc((q || '').trim())}」</div>`;
+    return;
+  }
+  el.innerHTML = items.map((a, i) => `<div class="qs-item${i === 0 ? ' sel' : ''}" data-i="${i}">
+    <span class="qt">${esc(a.title)}</span>
+    <span class="qp">${esc(a.path)}</span>
+    <span class="qm">${fmtEdited(a.updated, true)}</span>
+  </div>`).join('');
+  el.querySelectorAll('.qs-item').forEach(node => {
+    node.addEventListener('mouseenter', () => qsSet(+node.dataset.i));
+    node.addEventListener('click', () => qsOpen(+node.dataset.i));
+  });
+}
+
+function qsSet(i) {
+  qsSel = i;
+  document.querySelectorAll('#qsList .qs-item').forEach((n, k) => n.classList.toggle('sel', k === i));
+  const n = document.querySelector('#qsList .qs-item.sel');
+  if (n) n.scrollIntoView({ block: 'nearest' });
+}
+
+function qsOpen(i) {
+  const a = qsItems[i];
+  if (!a) return;
+  closeQS();
+  openArticle(a.path);
+}
+
+function qsKey(e) {
+  if (e.key === 'ArrowDown') { e.preventDefault(); qsSet(Math.min(qsItems.length - 1, qsSel + 1)); }
+  else if (e.key === 'ArrowUp') { e.preventDefault(); qsSet(Math.max(0, qsSel - 1)); }
+  else if (e.key === 'Enter') {
+    e.preventDefault();
+    const q = e.target.value.trim();
+    if (qsItems.length && !e.shiftKey) { qsOpen(qsSel); return; }
+    if (q) { closeQS(); newArticleDialog('', q); }
+  } else if (e.key === 'Escape') {
+    e.preventDefault(); e.stopPropagation(); closeQS();
+  }
+}
+
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && !e.shiftKey && /^[kKoO]$/.test(e.key)) {
+    const t = e.target || {};
+    if (/INPUT|TEXTAREA|SELECT/i.test(t.tagName || '') || t.isContentEditable) return;
+    e.preventDefault();
+    openQS();
+  }
+});
+
+/* Esc：关掉面板 / 从文章回到首页 */
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  const mask = document.getElementById('qsMask');
+  if (mask && mask.classList.contains('on')) return;
+  const t = e.target || {};
+  if (/INPUT|TEXTAREA|SELECT/i.test(t.tagName || '') || t.isContentEditable) return;
+  if (state.view === 'article' || state.view === 'graph') openHome();
+});
 function findFolder(node, path) {
   if (node.path === path) return node;
   for (const f of node.folders) {
@@ -524,6 +703,7 @@ function renderArticle() {
     try {
       await POST('/api/save', { path: state.articlePath, content: md });
       $('#saveState').textContent = '✓ 已自动保存';
+      var _eaS=document.getElementById('editedAt'); if(_eaS) _eaS.textContent='已保存 '+new Date().toTimeString().slice(0,5);
     } catch { $('#saveState').textContent = '⚠ 保存失败'; }
   }
   function scheduleSave() {
@@ -769,6 +949,29 @@ function parentOf(p) { const i = p.lastIndexOf('/'); return i < 0 ? '' : p.slice
 
 /* ---------------- 视图切换 ---------------- */
 // 面包屑：知识库 / 分区 / 子分区 / 当前位置（可点击：点根回首页，点分区定位到该级）
+/* 最后修改时间：目录用短格式，顶部用完整格式 */
+function fmtEdited(ts, short) {
+  if (!ts) return '';
+  const d = new Date(ts), now = new Date();
+  const s0 = t => new Date(t.getFullYear(), t.getMonth(), t.getDate()).getTime();
+  const days = Math.round((s0(now) - s0(d)) / 86400000);
+  const hm = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+  if (days <= 0) return short ? hm : '今天 ' + hm;
+  if (days === 1) return short ? '昨天' : '昨天 ' + hm;
+  if (days < 7) return short ? days + ' 天' : days + ' 天前';
+  const md = (d.getMonth() + 1) + '.' + d.getDate();
+  return d.getFullYear() === now.getFullYear() ? md : String(d.getFullYear()).slice(2) + '.' + md;
+}
+
+function findArticle(path) {
+  let hit = null;
+  (function walk(n) {
+    if (!n || hit) return;
+    for (const a of n.articles || []) if (a.path === path) { hit = a; return; }
+    for (const f of n.folders || []) walk(f);
+  })(state.tree);
+  return hit;
+}
 function crumbHTML(folderPath, currentLabel) {
   const parts = ['清溯 Zora', ...folderPath.split('/').filter(Boolean)];
   let acc = '';
@@ -791,10 +994,29 @@ function gotoFolder(path) {
   toast('已定位到「' + basename(path) + '」');
 }
 
+/* ---------------- 浏览历史：浏览器后退可用 ---------------- */
+var _bootAt = Date.now() + 1200;
+var _noPush = false;
+function navTo(qs) {
+  if (_noPush || Date.now() < _bootAt) return;
+  try {
+    if (location.search.replace(/^\?/, "") === String(qs || "").replace(/^\?/, "")) return;
+    history.pushState(null, "", qs || location.pathname);
+  } catch (e) {}
+}
+window.addEventListener("popstate", function () {
+  _noPush = true;
+  var p = new URLSearchParams(location.search).get("path");
+  var v = new URLSearchParams(location.search).get("view");
+  var run = p ? openArticle(p) : (v === "graph" ? openGraph() : Promise.resolve(openHome()));
+  Promise.resolve(run).then(function () { setTimeout(function () { _noPush = false; }, 0); }, function () { _noPush = false; });
+});
 function openHome() {
   state.view = 'home'; state.folder = ''; state.editing = false; state.searchResults = null;
+  navTo("");
   setRibbon('rbFiles');
   $('#crumb').innerHTML = `清溯 Zora <small>${countArticles(state.tree)} 篇文章</small>`;
+  var _ez0 = document.getElementById('editedAt'); if (_ez0) _ez0.textContent = '';
   renderHome();
 }
 
@@ -810,13 +1032,16 @@ async function openArticle(path) {
   if (state.flushDoc) await state.flushDoc(); // 离开前把正在编辑的内容存掉
   const data = await GET('/api/article?path=' + encodeURIComponent(path));
   state.view = 'article'; state.articlePath = path;
+  navTo("?path=" + encodeURIComponent(path));
   state.articleContent = data.content; state.articleTitle = data.title;
   state.editing = false;
   setRibbon('rbFiles');
   // 展开文章所在的各级父分区，保证树中能看到高亮
   let anc = parentOf(path);
   while (anc) { state.expanded[anc] = true; anc = parentOf(anc); }
-  $('#crumb').innerHTML = crumbHTML(parentOf(path), data.title);
+  var _cr = document.getElementById('crumb'); _cr.innerHTML = crumbHTML(parentOf(path), data.title);
+  var _ea = document.getElementById('editedAt'), _art = findArticle(path);
+  if (_ea) _ea.textContent = (_art && _art.updated) ? ('最后修改 ' + fmtEdited(_art.updated)) : '';
   renderArticle();
   renderSidebar(); // 侧栏高亮当前文章
 }
@@ -825,8 +1050,10 @@ async function openArticle(path) {
 async function openGraph() {
   if (state.flushDoc) await state.flushDoc();
   state.view = 'graph';
+  navTo("?view=graph");
   setRibbon('rbGraph');
   $('#crumb').innerHTML = `清溯 Zora <span class="sep">/</span> 关系图谱 <small>拖拽 · 缩放 · 点击节点打开文章</small>`;
+  var _ez0 = document.getElementById('editedAt'); if (_ez0) _ez0.textContent = '';
   $('#content').innerHTML = `
     <div class="graph-wrap" id="graphWrap">
       <canvas id="graphCanvas"></canvas>
@@ -1146,33 +1373,6 @@ async function moveDialog(path, title, isArticle) {
     openArticle(r.path);
   });
 }
-
-/* ---------------- 搜索 ---------------- */
-let searchTimer = null;
-var _si=document.getElementById('searchInput'); if(_si) document.getElementById('searchInput').addEventListener('input', e => {
-  clearTimeout(searchTimer);
-  const q = e.target.value.trim();
-  searchTimer = setTimeout(async () => {
-    if (!q) { state.view === 'search' && (state.folder ? openFolder(state.folder) : openHome()); return; }
-    const results = await GET('/api/search?q=' + encodeURIComponent(q));
-    state.view = 'search';
-    $('#crumb').innerHTML = `清溯 Zora <span class="sep">/</span> 搜索 <small>“${esc(q)}” · ${results.length} 条结果</small>`;
-    $('#content').innerHTML = results.length
-      ? `<div class="search-list">${results.map(r => `
-          <div class="search-item" data-path="${esc(r.path)}">
-            <div class="t">${esc(r.title)}</div>
-            <div class="s">${esc(r.snippet)}</div>
-          </div>`).join('')}</div>`
-      : `<div class="empty"><div class="big">🔍</div><h3>没有找到相关文章</h3></div>`;
-    $('#content').querySelectorAll('.search-item').forEach(el => {
-      el.addEventListener('click', () => openArticle(el.dataset.path));
-      el.addEventListener('contextmenu', e => {
-        e.preventDefault(); e.stopPropagation();
-        articleMenu(el.dataset.path, basename(el.dataset.path), e.clientX, e.clientY);
-      });
-    });
-  }, 300);
-});
 
 /* ---------------- 拖拽导入（支持整个文件夹） ---------------- */
 let dragDepth = 0;
