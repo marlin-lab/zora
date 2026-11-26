@@ -548,3 +548,7 @@ button, input, select, textarea, .panel, .card, .toast, .ctx-menu,
   font-family: var(--body) !important;
 }
 .brand, .article-title, .content h1, .content h2 { font-family: var(--head) !important; font-weight: 400 !important; }
+
+/* 关系图谱按钮图标：橙色 */
+#rbGraph svg{color:#f97316}
+#rbGraph:hover svg{color:#ea580c}

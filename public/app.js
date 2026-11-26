@@ -1059,7 +1059,7 @@ async function openGraph() {
   $('#content').innerHTML = `
     <div class="graph-wrap" id="graphWrap">
       <canvas id="graphCanvas"></canvas>
-      <div class="graph-hud">🕸 颜色越鲜=越近写的 · 滚轮缩放 · 拖背景平移 · 单击打开</div>
+      <div class="graph-hud"><i style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#f97316;margin-right:7px;vertical-align:middle;box-shadow:0 0 0 2px rgba(249,115,22,.16)"></i>颜色越鲜=越近写的 · 滚轮缩放 · 拖背景平移 · 单击打开</div>
     </div>`;
   let g;
   try { g = await GET('/api/graph'); }
@@ -1072,11 +1072,15 @@ async function openGraph() {
     const tr = await GET('/api/tree');
     (function walkNode(nd){ (nd.articles||[]).forEach(function(a){ updMap[a.path]=a.updated||0; }); (nd.folders||[]).forEach(walkNode); })(tr);
   } catch (e) {}
-  function ageCol(ts){
-    if (!ts) return 'hsl(196,4%,76%)';
+  function ageW(ts){
+    if (!ts) return 0;
     const days = (Date.now() - ts) / 86400000;
-    const w = Math.max(0, Math.min(1, 1 - days / 90));
-    return 'hsl(196,' + Math.round(4 + 56 * w) + '%,' + Math.round(76 - 24 * w) + '%)';
+    const w = Math.max(0, Math.min(1, 1 - days / 120));
+    return Math.pow(w, 0.65);
+  }
+  function ageCol(ts){
+    const w = ageW(ts);
+    return 'hsl(24,' + Math.round(8 + 84 * w) + '%,' + Math.round(78 - 30 * w) + '%)';
   }
 
   const canvas = $('#graphCanvas');
@@ -1088,7 +1092,7 @@ async function openGraph() {
     const ang = (i / Math.max(1, g.nodes.length)) * Math.PI * 2;
     const r = 160 + (i % 7) * 42;
     return {
-      ...n, deg: 0, col: ageCol(updMap[n.path]),
+      ...n, deg: 0, col: ageCol(updMap[n.path]), w: ageW(updMap[n.path]),
       x: Math.cos(ang) * r, y: Math.sin(ang) * r,
       vx: 0, vy: 0,
     };
@@ -1167,7 +1171,7 @@ async function openGraph() {
     alpha = Math.max(0.35, alpha * 0.995); // 收敛到持续微动
   }
 
-  function nodeR(n) { return 4.5 + Math.min(7, n.deg * 1.4); }
+  function nodeR(n) { return 4.5 + Math.min(7, n.deg * 1.4) + (n.w || 0) * 1.8; }
 
   function draw() {
     const W = wrap.clientWidth, H = wrap.clientHeight;
@@ -1179,7 +1183,7 @@ async function openGraph() {
     for (const e of edges) {
       const a = byId[e.s], b = byId[e.t];
       const hot = hoverId !== null && (e.s === hoverId || e.t === hoverId);
-      ctx.strokeStyle = hot ? 'rgba(79,110,247,.85)' : 'rgba(125,131,155,.28)';
+      ctx.strokeStyle = hot ? 'rgba(234,88,12,.9)' : 'rgba(125,131,155,.26)';
       ctx.lineWidth = hot ? 1.6 / view.k : 1 / view.k;
       ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
     }
@@ -1189,7 +1193,7 @@ async function openGraph() {
       const near = hoverId !== null && edges.some(e => (e.s === hoverId && e.t === n.id) || (e.t === hoverId && e.s === n.id));
       ctx.beginPath();
       ctx.arc(n.x, n.y, nodeR(n) + (hot ? 2.5 : 0), 0, Math.PI * 2);
-      ctx.fillStyle = hot ? '#4f6ef7' : near ? '#7c5cf0' : n.col;
+      ctx.fillStyle = hot ? '#9a3412' : near ? '#fdba74' : n.col;
       ctx.globalAlpha = hoverId === null || hot || near ? 1 : 0.35;
       ctx.fill();
       ctx.globalAlpha = hoverId === null || hot || near ? 1 : 0.4;
