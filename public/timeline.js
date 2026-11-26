@@ -10,7 +10,7 @@
   var TAGCOL = { '做事': '#41a1cf', '吃': '#e07a5f', '会议': '#8578dd', '课': '#4ea36c', '通勤': '#9aa0a6', '休息': '#c9a227', '生活': '#7cb7d3', '其他': '#b9bcb4' };
   var TINT = { '做事': '#e9f1fa', '吃': '#fbeae4', '会议': '#efecfb', '课': '#eaf3ea', '通勤': '#f1f2f3', '休息': '#fbf4df', '生活': '#e0eff6', '其他': '#f4f4ef' };
   var SLOT = 32;        /* 30 分钟 = 32px */
-  var SNAP = 15;        /* 拖动吸附粒度（分钟） */
+  var SNAP = 5;        /* 拖动吸附粒度（分钟） */
   var FILE = 'timeline/' + ymd() + '.md';
   var ROWS = [];
   var RAW = null;
@@ -414,59 +414,58 @@
   }
 
   /* ---------------- 拖动 / 拉伸 / 新建 ---------------- */
-  var drag = null;
+  var drag = null, rafId = 0, swallowClick = false;
+  var DRAG_T = 2;
 
   function snapMin(m) { return Math.round(m / SNAP) * SNAP; }
+  function wrapEl() { return document.getElementById('tbWrap'); }
 
-  document.addEventListener('pointerdown', function (e) {
+  function slotTop(min) { return (min - BASE) / 30 * SLOT; }
+
+  function startDrag(e) {
     if (e.button !== 0) return;
     var blk = e.target.closest && e.target.closest('.tbBlock');
     if (!blk) return;
-    var card = blk;
-    var rect = card.getBoundingClientRect();
-    var i = +card.getAttribute('data-i');
+    var rect = blk.getBoundingClientRect();
+    var i = +blk.getAttribute('data-i');
     var h = rect.height;
-    var edge = h >= 44 ? 10 : 7;
+    var edge = h >= 46 ? 10 : (h >= 30 ? 7 : (h >= 22 ? 5 : 0));
     var mode = 'move';
-    if (h >= 26 && e.clientY - rect.top < edge) mode = 'top';
-    else if (h >= 26 && rect.bottom - e.clientY < edge) mode = 'end';
+    if (edge && e.clientY - rect.top < edge) mode = 'top';
+    else if (edge && rect.bottom - e.clientY < edge) mode = 'end';
     drag = {
-      i: i, mode: mode, y0: e.clientY, el: card, moved: false,
+      i: i, mode: mode, pid: e.pointerId, el: blk, moved: false, trashHit: false,
+      y0: e.clientY, lastY: e.clientY,
       t0: toMin(ROWS[i].t), e0: toMin(ROWS[i].end),
-      baseTop: parseFloat(card.style.top), baseH: parseFloat(card.style.height)
+      top0: parseFloat(blk.style.top), h0: parseFloat(blk.style.height),
+      scroll0: wrapEl() ? wrapEl().scrollTop : 0,
+      cur: null
     };
+    try { blk.setPointerCapture(e.pointerId); } catch (_) {}
     e.preventDefault();
-  });
+  }
 
-  window.addEventListener('pointermove', function (e) {
+  function autoScroll() {
     if (!drag) return;
-    var dy = e.clientY - drag.y0;
-    if (!drag.moved) {
-      if (Math.abs(dy) < 3) return;
-      drag.moved = true;
-      drag.el.classList.add('dragging');
-      document.body.classList.add('tbDragging');
-      showTrash(true);
-    }
+    var wrap = wrapEl();
+    if (!wrap) return;
+    var r = wrap.getBoundingClientRect();
+    var edge = 36, sp = 0;
+    if (drag.lastY < r.top + edge) sp = -Math.min(8, Math.ceil((r.top + edge - drag.lastY) / 5));
+    else if (drag.lastY > r.bottom - edge) sp = Math.min(8, Math.ceil((drag.lastY - (r.bottom - edge)) / 5));
+    if (sp) wrap.scrollTop += sp;
+  }
+
+  function applyDrag() {
+    if (!drag) return;
+    var wrap = wrapEl();
+    var dScroll = (wrap ? wrap.scrollTop : 0) - drag.scroll0;
+    var dy = (drag.lastY - drag.y0) + dScroll;
     var dMin = snapMin(dy / SLOT * 30);
-    /* 拖到垃圾桶上就标红（只有整块移动才允许删） */
-    var tr = document.getElementById('tbTrash');
-    if (tr) {
-      var rc = tr.getBoundingClientRect();
-      var inside = drag.mode === 'move' && e.clientX > rc.left - 6 && e.clientX < rc.right + 6 && e.clientY > rc.top - 6 && e.clientY < rc.bottom + 6;
-      tr.classList.toggle('hot', inside);
-      drag.trashHit = inside;
-    }
-    var tip = document.getElementById('tbTip');
-    if (drag.trashHit) {
-      if (tip) tip.textContent = '松手删除';
-      if (tip) { tip.style.left = (e.clientX + 14) + 'px'; tip.style.top = (e.clientY - 26) + 'px'; }
-      return;
-    }
-    var r = ROWS[drag.i];
     var t = drag.t0, en = drag.e0;
+
     if (drag.mode === 'move') {
-      t = Math.max(0, Math.min(24 * 60 - (en - t), drag.t0 + dMin));
+      t = Math.max(0, Math.min(24 * 60 - (drag.e0 - drag.t0), drag.t0 + dMin));
       en = t + (drag.e0 - drag.t0);
     } else if (drag.mode === 'end') {
       en = Math.max(t + SNAP, Math.min(24 * 60, drag.e0 + dMin));
@@ -474,37 +473,106 @@
       t = Math.max(0, Math.min(en - SNAP, drag.t0 + dMin));
     }
     drag.cur = { t: t, end: en };
-    var top = (t - BASE) / 30 * SLOT;
-    var hgt = (en - t) / 30 * SLOT;
-    drag.el.style.top = top + 'px';
-    drag.el.style.height = Math.max(18, hgt) + 'px';
-    drag.el.classList.toggle('sm', hgt < 36);
+
+    /* 视觉上完全跟手，松手才吸附 */
+    var topPx, hPx;
+    if (drag.mode === 'move') { topPx = drag.top0 + dy; hPx = drag.h0; }
+    else if (drag.mode === 'end') { topPx = drag.top0; hPx = Math.max(10, drag.h0 + dy); }
+    else { topPx = drag.top0 + dy; hPx = Math.max(10, drag.h0 - dy); }
+    drag.el.style.top = topPx + 'px';
+    drag.el.style.height = hPx + 'px';
+    drag.el.classList.toggle('sm', hPx < 36);
     var lab = drag.el.querySelector('i');
     if (lab) lab.textContent = toHHMM(t) + '–' + toHHMM(en);
-    var b = drag.el.querySelector('b');
-    if (b) b.title = toHHMM(t) + '–' + toHHMM(en);
-    /* 悬浮跟随的时间提示 */
-    var tip = document.getElementById('tbTip');
-    if (!tip) { tip = document.createElement('div'); tip.id = 'tbTip'; tip.className = 'tbTip'; document.body.appendChild(tip); }
-    tip.textContent = toHHMM(t) + ' – ' + toHHMM(en);
-    tip.style.left = (e.clientX + 14) + 'px';
-    tip.style.top = (e.clientY - 26) + 'px';
-  });
+    var bEl = drag.el.querySelector('b');
+    if (bEl) bEl.title = toHHMM(t) + '–' + toHHMM(en);
 
-  window.addEventListener('pointerup', function (e) {
+    /* 吸附参考线：告诉用户真正会落在哪个时间 */
+    var gd = document.querySelector('.tbGuide');
+    if (gd) gd.style.top = slotTop(t) + 'px';
+
+    /* 垃圾桶 */
+    var tr = document.getElementById('tbTrash');
+    var tip = document.getElementById('tbTip');
+    if (tr) {
+      var rc = tr.getBoundingClientRect();
+      var inside = drag.mode === 'move' && drag.lastX > rc.left - 10 && drag.lastX < rc.right + 10 && drag.lastY > rc.top - 10 && drag.lastY < rc.bottom + 10;
+      tr.classList.toggle('hot', inside);
+      drag.trashHit = inside;
+    }
+    if (!tip) { tip = document.createElement('div'); tip.id = 'tbTip'; tip.className = 'tbTip'; document.body.appendChild(tip); }
+    tip.textContent = drag.trashHit ? '松手删除' : (toHHMM(t) + ' – ' + toHHMM(en));
+    tip.style.left = (drag.lastX + 16) + 'px';
+    tip.style.top = (drag.lastY - 28) + 'px';
+  }
+
+  function tick() {
     if (!drag) return;
-    var d = drag; drag = null;
+    autoScroll();
+    applyDrag();
+    rafId = requestAnimationFrame(tick);
+  }
+
+  function finishDrag() {
+    if (!drag) return;
+    var d = drag;
+    drag = null;
+    cancelAnimationFrame(rafId);
     document.body.classList.remove('tbDragging');
     var tip = document.getElementById('tbTip'); if (tip) tip.remove();
-    d.el.classList.remove('dragging');
+    var gd = document.querySelector('.tbGuide'); if (gd) gd.remove();
     showTrash(false);
-    if (d.moved && d.trashHit && d.mode === 'move') { dropDelete(d.i); return; }
-    if (!d.moved || !d.cur) { return; }
+    d.el.classList.remove('dragging');
+    if (!d.moved) return;
+    swallowClick = true;
+    setTimeout(function () { swallowClick = false; }, 350);
+    if (d.trashHit && d.mode === 'move') { dropDelete(d.i); return; }
+    if (!d.cur) return;
+    if (d.cur.t === d.t0 && d.cur.end === d.e0) { render(true); return; }
     var next = ROWS.map(function (r) { return JSON.parse(JSON.stringify(r)); });
     next[d.i].t = toHHMM(d.cur.t);
     next[d.i].end = toHHMM(d.cur.end);
     commit(next);
+  }
+
+  document.addEventListener('pointerdown', startDrag);
+
+  window.addEventListener('pointermove', function (e) {
+    if (!drag) return;
+    if (e.pointerId && drag.pid && e.pointerId !== drag.pid) return;
+    drag.lastY = e.clientY;
+    drag.lastX = e.clientX;
+    if (!drag.moved) {
+      if (Math.abs(e.clientY - drag.y0) < DRAG_T) return;
+      drag.moved = true;
+      drag.el.classList.add('dragging');
+      document.body.classList.add('tbDragging');
+      showTrash(true);
+      var body = document.getElementById('tbBody');
+      if (body) {
+        var g = document.createElement('div');
+        g.className = 'tbGuide';
+        body.appendChild(g);
+      }
+      rafId = requestAnimationFrame(tick);
+    }
+    e.preventDefault();
+  }, { passive: false });
+
+  window.addEventListener('pointerup', function (e) {
+    if (!drag) return;
+    if (e.pointerId && drag.pid && e.pointerId !== drag.pid) return;
+    drag.lastY = e.clientY;
+    drag.lastX = e.clientX;
+    applyDrag();
+    finishDrag();
   });
+  window.addEventListener('pointercancel', finishDrag);
+  window.addEventListener('blur', finishDrag);
+  /* 兜底：鼠标已经松开却没收到 pointerup（在窗口外松手、切换应用等） */
+  window.addEventListener('mousemove', function (e) {
+    if (drag && e.buttons === 0) { drag.lastY = e.clientY; drag.lastX = e.clientX; applyDrag(); finishDrag(); }
+  }, true);
 
   window.addEventListener('contextmenu', function (e) {
     var blk = e.target.closest && e.target.closest('.tbBlock');
@@ -519,6 +587,15 @@
     e.preventDefault();
     startRename(+blk.getAttribute('data-i'), false);
   });
+
+  /* 拖动结束后那一次 click 直接吞掉，避免误触发「点空白新建」 */
+  document.addEventListener('click', function (e) {
+    if (swallowClick) {
+      swallowClick = false;
+      e.stopPropagation();
+      e.preventDefault();
+    }
+  }, true);
 
   /* 点空白格：以该格为开始新建一段 */
   document.addEventListener('click', function (e) {
@@ -628,6 +705,9 @@
     '.tbTrash.on{opacity:.92;transform:scale(1)}' +
     '.tbTrash.hot{background:#fdeeec;border-color:#e09284;color:#c3493a;transform:scale(1.14);opacity:1;border-style:solid}' +
     '.tbTrash svg{width:18px;height:18px;display:block}' +
+
+    '.tbGuide{position:absolute;left:0;right:0;height:0;border-top:1.5px dashed #eba24b;pointer-events:none;z-index:6;box-shadow:0 0 0 1px rgba(255,255,255,.5)}' +
+    '.tbBlock{touch-action:none}' +
     '';
 
   if (!document.getElementById('tbEditCss')) {
