@@ -698,16 +698,18 @@ function renderArticle() {
     const el = $('#docBody');
     if (!el) return;
     const md = htmlToMd(el);
-    if (md === state.articleContent) return;
+    if (md === state.articleContent) { state.dirty = false; return; }
     state.articleContent = md;
     try {
       await POST('/api/save', { path: state.articlePath, content: md });
+      state.dirty = false;
       $('#saveState').textContent = '✓ 已自动保存';
       var _eaS=document.getElementById('editedAt'); if(_eaS) _eaS.textContent='已保存 '+new Date().toTimeString().slice(0,5);
     } catch { $('#saveState').textContent = '⚠ 保存失败'; }
   }
   function scheduleSave() {
     $('#saveState').textContent = '编辑中…';
+    state.dirty = true;
     clearTimeout(saveTimer);
     saveTimer = setTimeout(doSave, 800);
   }
@@ -1029,7 +1031,7 @@ function openFolder(path) {
 }
 
 async function openArticle(path) {
-  if (state.flushDoc) await state.flushDoc(); // 离开前把正在编辑的内容存掉
+  if (state.flushDoc && state.dirty) await state.flushDoc(); // 离开前把正在编辑的内容存掉
   const data = await GET('/api/article?path=' + encodeURIComponent(path));
   state.view = 'article'; state.articlePath = path;
   navTo("?path=" + encodeURIComponent(path));
@@ -1048,7 +1050,7 @@ async function openArticle(path) {
 
 /* ---------------- 关系图谱（Obsidian 同款力导向图） ---------------- */
 async function openGraph() {
-  if (state.flushDoc) await state.flushDoc();
+  if (state.flushDoc && state.dirty) await state.flushDoc();
   state.view = 'graph';
   navTo("?view=graph");
   setRibbon('rbGraph');
