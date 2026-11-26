@@ -33,7 +33,7 @@
     '.kb-btn-main{border:none;background:var(--accent,#4f6ef7);color:#fff;border-radius:9px;padding:9px 20px;font-family:inherit;font-size:14px;cursor:pointer;transition:background .15s}',
     '.kb-btn-main:hover{background:var(--accent-2,#7c5cf0)}',
     '.kb-toast{position:fixed;left:50%;bottom:34px;transform:translate(-50%,0);background:rgba(20,24,40,.92);color:#fff;font-size:13px;padding:10px 20px;border-radius:100px;z-index:200}',
-    '.kb-toast.out{opacity:0;transition:opacity .4s}'
+    '.kb-toast.out{opacity:0;transition:opacity .4s}','#kbStageClose{position:fixed;right:20px;top:16px;z-index:6;width:34px;height:34px;border-radius:50%;border:1px solid #e3e6e1;background:#fff;color:#6b6b66;font-size:19px;line-height:32px;text-align:center;cursor:pointer;display:none;padding:0;box-shadow:0 1px 3px rgba(0,0,0,.05)}','body.kb-stage-on #kbStageClose{display:block}','#kbStageClose:hover{background:#2c2c2c;color:#fff;border-color:#2c2c2c}'
   ].join('\n');
   d.head.appendChild(st);
 
@@ -46,6 +46,15 @@
   fr.setAttribute('frameborder', '0');
   wrap.appendChild(fr);
   d.body.appendChild(wrap);
+
+  var closeBtn = d.createElement("button");
+  closeBtn.id = "kbStageClose";
+  closeBtn.type = "button";
+  closeBtn.setAttribute("aria-label", "关闭看板");
+  closeBtn.textContent = "×";
+  closeBtn.addEventListener("click", function () { closeStage(); });
+  d.body.appendChild(closeBtn);
+
 
 
   function openStage() {
@@ -133,16 +142,20 @@
   d.addEventListener('click', function (e) {
     var t = e.target.closest ? e.target.closest('button,a') : null;
     if (t) {
-      if (t.id === 'rbStatus' || t.id === 'btnStatus') { openStage(); return; }
+      if (t.id === 'rbStatus' || t.id === 'btnStatus') {
+        if (wrap.classList.contains('vis')) closeStage(); else openStage();
+        return;
+      }
       if (t.id === 'rbQuick' || t.id === 'btnQuick') { openNote(); return; }
       if (t.id === 'kbNoteSave') { saveNote(); return; }
       if (t.id === 'kbNoteCancel') { closeNote(); return; }
-      if ((t.closest('.ribbon') || t.closest('.topbar') || t.closest('#folderTree') || t.closest('.search-box')) && !t.closest('#kbNoteMask')) {
-        closeStage();
-      }
     }
-    if (e.target === mask) closeNote();
+    if (e.target === mask) { closeNote(); return; }
+    if (e.target.closest && e.target.closest('#kbNoteMask')) return;
+    if (e.target.closest && e.target.closest('#kbStageWrap')) return;
+    if (wrap.classList.contains('on')) closeStage();
   });
+
   d.addEventListener('keydown', function (e) {
     if (mask.classList.contains('on')) {
       if (e.key === 'Escape') closeNote();
