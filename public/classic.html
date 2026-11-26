@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>清溯 Zora · 编辑视图</title>
+  <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/skin.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📚</text></svg>">
+</head>
+<body>
+
+  <!-- 侧边栏：活动栏 + 面板（Obsidian 式） -->
+  <aside class="sidebar">
+    <nav class="ribbon">
+      <button class="rb-btn" id="rbStatus" title="数据看板（睡眠 · 体重 · 趋势）">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l5-6 4 4 4-3 5 6"/><circle cx="8" cy="11" r="1.4"/><circle cx="12" cy="15" r="1.4"/><circle cx="16" cy="12" r="1.4"/></svg>
+      </button>
+      <button class="rb-btn active" id="rbFiles" title="文件目录">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg>
+      </button>
+      <button class="rb-btn" id="rbGraph" title="关系图谱">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="2.6"/><circle cx="18" cy="6" r="2.6"/><circle cx="12" cy="18" r="2.6"/><path d="M7.2 8.2 10.9 15.8M16.8 8.2 13.1 15.8M8.6 6h6.8"/></svg>
+      </button>
+      <div class="rb-spacer"></div>
+      <button class="rb-btn" id="rbRandom" title="随机漫游一篇文章">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3h5v5"/><path d="M4 20L21 3"/><path d="M21 16v5h-5"/><path d="m15 15 6 6"/><path d="M4 4l5 5"/></svg>
+      </button>
+    </nav>
+
+    <div class="side-panel">
+      <div class="panel" id="panelFiles">
+        <div class="logo">
+          <div class="logo-text">清溯 Zora<br><span>ARCHIVE</span></div>
+          <div class="logo-acts">
+            <button class="lico" id="btnNewArticle" type="button" title="新建文章">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z"/><path d="M14 3v5h5"/><path d="M12 11v6M9 14h6"/></svg>
+            </button>
+            <button class="lico" id="btnImport" type="button" title="导入文件夹">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v10"/><path d="m7 9 5 5 5-5"/><path d="M4 18v2h16v-2"/></svg>
+            </button>
+            <button class="lico" id="btnNewFolder" type="button" title="新建分区">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/><path d="M12 11v5M9.5 13.5h5"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="sidebar-section" id="folderTree"></div>
+
+        <div class="trash" id="trashZone" title="把文章或分区拖到这里删除">拖到这儿删除</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- 主区域 -->
+  <main class="main">
+    <div class="topbar">
+      <div class="crumb" id="crumb">清溯 Zora</div>
+      <div class="spacer"></div>
+      <input type="file" id="importInput" webkitdirectory multiple hidden>
+    </div>
+    <div class="content" id="content"></div>
+  </main>
+
+  <!-- 拖拽导入遮罩（外部文件） -->
+  <div class="drop-overlay" id="dropOverlay">
+    <div class="drop-box">
+      <div class="icon">📥</div>
+      <h3>松手导入到「<span id="dropTargetName">当前分区</span>」</h3>
+      <p>支持 .md / .txt 文章、图片，以及<b>整个文件夹</b>（子文件夹自动变为分区）</p>
+    </div>
+  </div>
+
+  <div class="toast-wrap" id="toastWrap"></div>
+
+  <script src="/marked.min.js"></script>
+  <script src="/app.js"></script>
+  <script src="/bridge.js"></script>
+  <script>
+  (function(){
+    var q=new URLSearchParams(location.search);
+    var from=q.get('from')||'repo';
+    var p=q.get("path");
+    if(p){ setTimeout(function(){ try{ if(window.openArticle) openArticle(p); }catch(e){} },600); }
+    if(q.get("view")==="graph"){ setTimeout(function(){ try{ if(window.openGraph) openGraph(); }catch(e){} },700); }
+
+    /* 手机：侧栏改成抽屉，顶栏加一个 ☰ */
+    if(window.innerWidth<=760){
+      var sb=document.querySelector('.sidebar');
+      var tb=document.querySelector('.topbar');
+      if(sb&&tb){
+        var mask=document.createElement('div'); mask.className='sbMask'; document.body.appendChild(mask);
+        var btn=document.createElement('button');
+        btn.id='btnSide'; btn.className='btn btn-ghost'; btn.type='button'; btn.textContent='☰';
+        btn.setAttribute('aria-label','打开目录');
+        tb.insertBefore(btn, tb.firstChild);
+        function drawer(v){
+          sb.classList.toggle('open',v); mask.classList.toggle('on',v);
+          btn.textContent = v ? '✕' : '☰';
+        }
+        btn.addEventListener('click',function(){ drawer(!sb.classList.contains('open')); });
+        mask.addEventListener('click',function(){ drawer(false); });
+        /* 选了文章就自动收起，别挡着内容 */
+        sb.addEventListener('click',function(e){
+          var hit=e.target.closest&&e.target.closest('.article-item,.folder-item');
+          if(hit) setTimeout(function(){ drawer(false); },180);
+        });
+      }
+    }
+    document.addEventListener('keydown',function(e){
+      if(e.key!=="Escape") return;
+      var t=e.target||{};
+      if(/INPUT|TEXTAREA|SELECT/i.test(t.tagName||"")||t.isContentEditable) return;
+      location.href='/#'+from;
+    });
+  })();
+  </script>
+</body>
+</html>

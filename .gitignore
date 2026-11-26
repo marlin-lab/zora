@@ -1,0 +1,11 @@
+# —— 个人数据：一律不进仓库 ——
+data/**
+state.json
+
+# —— 日志与临时文件 ——
+*.log
+server.log
+node_modules/
+.DS_Store
+Thumbs.db
+__pv.html

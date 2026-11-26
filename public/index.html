@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>清溯 Zora · 个人系统</title>
+<link rel="stylesheet" href="/home.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✦</text></svg>">
+</head>
+<body>
+
+<aside class="sidenav" id="sidenav">
+  <div class="snBrand">清溯 Zora<em>KNOWLEDGE</em></div>
+  <nav class="snLinks">
+    <a href="#dash" data-sec="dash"><i>01</i>数据</a>
+    <a href="#repo" data-sec="repo"><i>02</i>仓库</a>
+  </nav>
+  <div class="snSearchWrap">
+    <button class="snBtn" id="searchOpen">搜索<kbd>Ctrl K</kbd></button>
+  </div>
+  <div class="dtBody snTree" id="repoTree"></div>
+  <div class="snFoot">
+    <button type="button" id="toTop">↑ 回到顶部</button>
+  </div>
+</aside>
+<div class="snMask" id="snMask"></div>
+<div class="snTop">
+  <button type="button" id="snToggle" aria-label="打开导航">☰</button>
+  <span class="t">清溯 Zora</span>
+  <button type="button" id="snSea">搜索</button>
+</div>
+
+<!-- ================= 一、数据 ================= -->
+<section class="sec" id="dash">
+  <div class="secmark">01 / 数据</div>
+  <div class="expBar" id="expBar" style="display:none">
+    <button id="mdFold" type="button">收起，回到摘要 ↑</button>
+  </div>
+  <iframe id="dashFrame" src="/dashboard.html?embed=1&nosse=1" scrolling="no" title="数据看板"></iframe>
+  <div id="dashMini" style="display:none"></div>
+</section>
+
+<!-- ================= 二、仓库 ================= -->
+<section class="sec" id="repo">
+  <div class="repoMain">
+    <div class="repoTop">
+      <nav class="crumb"><a href="#dash">清溯 Zora</a><span>/</span><b>仓库</b></nav>
+      <div class="spacer"></div>
+      <a class="rbtn" href="#dash">状态</a>
+      <button class="rbtn" id="btnNote3" type="button">小记</button>
+      <a class="rbtn" href="/graph.html">关系图谱</a>
+      <button class="rbtn" id="btnImport2" type="button">导入文件夹</button>
+      <button class="rbtn" id="btnNew3" type="button">新建文章</button>
+    </div>
+    <div class="repoWelcome">
+      <div class="secmark">02 / 仓库</div>
+      <h2>仓库<em id="repoCount">读取中</em></h2>
+      <div class="repoActs">
+        <button class="goBtn" id="btnRand2" type="button">随机打开一篇</button>
+        <button class="goBtn" id="btnNew2" type="button">写一篇</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 三、小记 ================= -->
+<section class="sec" id="notes">
+  <div class="secmark">小记</div>
+  <h2>最近的小记</h2>
+  <p class="lead">不写长文，一段话就够。写下来的随手一记，也进仓库、也能被搜到。</p>
+
+  <div class="panel">
+    <div class="notes" id="todayNotes"><span class="ph">读取中…</span></div>
+  </div>
+</section>
+
+<footer>
+  <h2>「一天一行，不写就空着，空着也算数。」</h2>
+  <div class="fnav">
+    <a href="#due">倒数</a>
+    <a href="#dash">数据</a>
+    <a href="#repo">仓库</a>
+    <a href="/classic.html">编辑视图</a>
+    <a href="/graph.html">关系图谱</a>
+  </div>
+</footer>
+
+<!-- 搜索 -->
+<div class="seamask" id="seamask">
+  <div class="seabox">
+    <input class="seain" id="seaInput" placeholder="搜数据、笔记、文档、图谱节点…" autocomplete="off">
+    <div class="seahint">↑↓ 选择 · 回车打开 · Esc 关闭 · Ctrl/Cmd+K 唤出</div>
+    <div id="seaOut"></div>
+  </div>
+</div>
+
+<!-- 小记 -->
+<div class="notemask" id="notemask">
+  <div class="notedlg">
+    <h3>小记</h3>
+    <div class="sub" id="noteSub">TODAY</div>
+    <textarea class="noteta" id="noteText" placeholder="一句话就行。写不完整也没关系。"></textarea>
+    <div class="notef">
+      <span class="hint">存进仓库 me 分区 · Ctrl+Enter 保存 · Esc 关闭</span>
+      <button class="no" id="noteCancel">取消</button>
+      <button class="ok" id="noteSave">保存</button>
+    </div>
+  </div>
+</div>
+
+<div class="tst" id="tst"></div>
+
+<!-- 写一篇 -->
+<div class="notemask" id="newmask">
+  <div class="notedlg">
+    <h3>写一篇</h3>
+    <div class="sub" id="newSub">TODAY</div>
+    <input class="noteta nt1" id="newTitle" placeholder="标题，日期类可以直接写 11.25" autocomplete="off">
+    <div class="npick">
+      <label for="newFolder">放进哪个分区</label>
+      <select id="newFolder"></select>
+    </div>
+    <div class="notef">
+      <span class="hint">建好直接进编辑视图 · Enter 创建 · Esc 关闭</span>
+      <button class="no" id="newCancel" type="button">取消</button>
+      <button class="ok" id="newSave" type="button">创建</button>
+    </div>
+  </div>
+</div>
+
+<!-- 加一条待办 -->
+<div class="notemask" id="todomask">
+  <div class="notedlg">
+    <h3>加一条待办</h3>
+    <div class="sub">填了截止日，才会出现在上面的倒数卡里</div>
+    <input class="noteta nt1" id="todoText" placeholder="要做什么，例如：交数据结构实验报告" autocomplete="off">
+    <div class="npick">
+      <label for="todoDue">截止</label>
+      <input type="date" id="todoDue" class="tdue">
+    </div>
+    <div class="notef">
+      <span class="hint">Enter 添加 · Esc 关闭</span>
+      <button class="no" id="todoCancel" type="button">取消</button>
+      <button class="ok" id="todoSave" type="button">添加</button>
+    </div>
+  </div>
+</div>
+
+<input type="file" id="upInput" multiple hidden>
+<script src="/home.js"></script>
+</body>
+</html>

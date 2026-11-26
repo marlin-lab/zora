@@ -1,0 +1,80 @@
+/* 清溯 Zora · 皮肤层（加载在 style.css 之后）：只统品牌与底色，字号保持 Marlin 原生 */
+
+.logo {
+  padding: 2px 8px 16px;
+}
+.logo-text {
+  font-family: var(--head);
+  font-size: 24px;
+  font-weight: 400;
+  line-height: 1.1;
+  letter-spacing: -.01em;
+}
+.logo-text span {
+  display: inline-block;
+  margin-top: 4px;
+  font-family: var(--body);
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: .2em;
+  color: var(--text-3);
+}
+
+.sidebar {
+  width: 264px;
+  min-width: 264px;
+  background: var(--bg);
+  border-right: 1px solid var(--border);
+}
+.ribbon { background: var(--bg); }
+.side-panel {
+  padding: 22px 16px 14px;
+  background: var(--bg);
+}
+.btn-primary {
+  background: #242424;
+  border-color: #242424;
+}
+.btn-primary:hover {
+  background: #3a3a3a;
+}
+
+/* ===== 侧栏底部：工具入口 + 垃圾桶 ===== */
+.panel-tools {
+  flex: none;
+  display: flex; flex-direction: column; gap: 1px;
+  margin-top: 10px; padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+.ptool {
+  border: 0; background: transparent; text-align: left;
+  font-family: var(--body); font-size: 13.5px; color: var(--text-2);
+  padding: 8px 10px; border-radius: 8px; cursor: pointer; letter-spacing: .01em;
+}
+.ptool:hover { background: #fff; color: var(--text); }
+.trash {
+  flex: none; margin-top: 8px;
+  border: 1px dashed var(--border); border-radius: 9px;
+  padding: 9px 0; text-align: center;
+  font-size: 12px; color: var(--text-3); letter-spacing: .04em;
+  transition: border-color .15s, color .15s, background .15s;
+}
+.trash.hot { border-color: var(--danger); border-style: solid; color: var(--danger); background: #fbf1ee; }
+
+/* ===== 目录拖拽 ===== */
+.tree-row[draggable="true"] { cursor: grab; }
+.tree-row.dragging { opacity: .42; }
+.tree-row.drop-on { background: var(--accent-soft); box-shadow: inset 0 0 0 1px var(--accent); border-radius: 9px; }
+.ptico { display: inline-block; width: 18px; color: var(--text-3); font-size: 13px; }
+.ptool:hover .ptico { color: var(--text-2); }
+/* ===== logo 旁的小图标（新建文章 / 导入 / 新建分区） ===== */
+.logo { align-items: flex-start; }
+.logo-acts { margin-left: auto; display: flex; gap: 1px; align-items: center; padding-top: 2px; }
+.lico {
+  width: 26px; height: 26px; border: 0; background: none; border-radius: 7px;
+  color: var(--text-3); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background .12s, color .12s;
+}
+.lico svg { width: 15px; height: 15px; }
+.lico:hover { background: #fff; color: var(--text); }
